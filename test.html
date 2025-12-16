@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Summing Game - Test Suite</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #667eea;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .test-case {
+            margin: 15px 0;
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            background: #f8f9fa;
+        }
+        .test-case h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .pass {
+            background: #d4edda;
+            color: #155724;
+        }
+        .fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .board-display {
+            display: inline-grid;
+            grid-template-columns: repeat(9, 30px);
+            grid-template-rows: repeat(9, 30px);
+            gap: 2px;
+            margin: 10px 0;
+        }
+        .board-display .cell {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            background: white;
+        }
+        .board-display .cell.filled {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Summing Game - Test Suite</h1>
+    
+    <div class="test-section">
+        <h2>테스트 실행</h2>
+        <button onclick="runAllTests()">전체 테스트 실행</button>
+        <button onclick="clearResults()">결과 초기화</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script src="game.js"></script>
+    <script>
+        // SummingGame 클래스 수정 - 테스트용으로 DOM 요소 없이도 동작하도록
+        class TestGame extends SummingGame {
+            initElements() {
+                // 테스트 모드에서는 DOM 요소 초기화 스킵
+                this.boardElement = null;
+                this.scoreElement = null;
+                this.movesElement = null;
+                this.remainingElement = null;
+                this.currentNumberElement = null;
+                this.upcomingNumbersElement = null;
+                this.gameStatusElement = null;
+                this.highScoreElement = null;
+                this.bestMovesElement = null;
+                this.newGameBtn = null;
+                this.overlay = null;
+                this.modalTitle = null;
+                this.modalMessage = null;
+                this.modalCloseBtn = null;
+            }
+
+            render() {
+                // 테스트 모드에서는 렌더링 스킵
+            }
+
+            showEndMessage(title, message) {
+                // 테스트 모드에서는 모달 표시 스킵
+                console.log(`게임 종료: ${title} - ${message}`);
+            }
+
+            updateRecords() {
+                // 테스트 모드에서는 기록 업데이트 UI 스킵
+            }
+
+            getCellElement(row, col) {
+                // 테스트 모드에서는 더미 요소 반환
+                return {
+                    classList: {
+                        add: () => {},
+                        remove: () => {}
+                    }
+                };
+            }
+        }
+
+        class TestRunner {
+            constructor() {
+                this.results = [];
+            }
+
+            assert(condition, message) {
+                if (condition) {
+                    this.results.push({ pass: true, message });
+                    return true;
+                } else {
+                    this.results.push({ pass: false, message });
+                    return false;
+                }
+            }
+
+            assertEqual(actual, expected, message) {
+                const pass = actual === expected;
+                const fullMessage = `${message} - Expected: ${expected}, Got: ${actual}`;
+                this.results.push({ pass, message: fullMessage });
+                return pass;
+            }
+
+            assertNotNull(value, message) {
+                const pass = value !== null && value !== undefined;
+                this.results.push({ pass, message });
+                return pass;
+            }
+
+            getResults() {
+                return this.results;
+            }
+
+            clear() {
+                this.results = [];
+            }
+        }
+
+        function displayBoard(board, title) {
+            let html = `<div><strong>${title}</strong></div><div class="board-display">`;
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    const value = board[i][j];
+                    const className = value !== null ? 'cell filled' : 'cell';
+                    const text = value !== null ? value : '';
+                    html += `<div class="${className}">${text}</div>`;
+                }
+            }
+            html += '</div>';
+            return html;
+        }
+
+        // Test 1: 초기 보드 상태 확인
+        function testInitialBoard() {
+            const test = new TestRunner();
+            const game = new TestGame();
+            
+            test.assert(game.board.length === 9, "보드 크기는 9x9");
+            test.assertEqual(game.score, 0, "초기 점수는 0");
+            test.assertEqual(game.moves, 0, "초기 배치 횟수는 0");
+            test.assertEqual(game.gameStatus, 'playing', "초기 게임 상태는 playing");
+            
+            // 중앙 7x7 영역에 숫자가 있는지 확인
+            let filledCount = 0;
+            for (let i = 1; i < 8; i++) {
+                for (let j = 1; j < 8; j++) {
+                    if (game.board[i][j] !== null) {
+                        filledCount++;
+                    }
+                }
+            }
+            test.assertEqual(filledCount, 49, "중앙 7x7 영역 (49개 타일)에 숫자 배치");
+            
+            // 외곽이 비어있는지 확인
+            let emptyEdges = 0;
+            for (let i = 0; i < 9; i++) {
+                if (game.board[0][i] === null) emptyEdges++;
+                if (game.board[8][i] === null) emptyEdges++;
+            }
+            for (let i = 1; i < 8; i++) {
+                if (game.board[i][0] === null) emptyEdges++;
+                if (game.board[i][8] === null) emptyEdges++;
+            }
+            test.assertEqual(emptyEdges, 32, "외곽 테두리 (32개 타일)는 비어있음");
+            
+            return { title: "Test 1: 초기 보드 상태", results: test.getResults() };
+        }
+
+        // Test 2: 이웃 계산 테스트
+        function testNeighbours() {
+            const test = new TestRunner();
+            const game = new TestGame();
+            
+            // 중앙 (4,4)의 이웃은 8개
+            const centerNeighbours = game.getNeighbours(4, 4);
+            test.assertEqual(centerNeighbours.length, 8, "중앙 셀의 이웃은 8개");
+            
+            // 코너 (0,0)의 이웃은 3개
+            const cornerNeighbours = game.getNeighbours(0, 0);
+            test.assertEqual(cornerNeighbours.length, 3, "코너 셀의 이웃은 3개");
+            
+            // 가장자리 (0,4)의 이웃은 5개
+            const edgeNeighbours = game.getNeighbours(0, 4);
+            test.assertEqual(edgeNeighbours.length, 5, "가장자리 셀의 이웃은 5개");
+            
+            return { title: "Test 2: 이웃 계산", results: test.getResults() };
+        }
+
+        // Test 3: 매치 로직 테스트
+        function testMatchLogic() {
+            const test = new TestRunner();
+            const game = new TestGame();
+            
+            // 테스트 보드 설정
+            game.board = Array(9).fill(null).map(() => Array(9).fill(null));
+            
+            // 케이스 1: 3+4=7, 일의 자리 7 -> 매치 성공
+            game.board[4][4] = 3;
+            game.board[4][5] = 4;
+            game.board[5][4] = 7; // 새로 배치
+            
+            const match1 = game.checkMatch(5, 4);
+            test.assertNotNull(match1, "케이스 1: 3+4=7, 배치한 숫자 7 -> 매치 성공");
+            if (match1) {
+                test.assertEqual(match1.length, 3, "케이스 1: 제거되는 타일은 3개");
+            }
+            
+            // 케이스 2: 8+9=17, 일의 자리 7 -> 매치 성공
+            game.board = Array(9).fill(null).map(() => Array(9).fill(null));
+            game.board[3][3] = 8;
+            game.board[3][4] = 9;
+            game.board[4][3] = 7; // 새로 배치
+            
+            const match2 = game.checkMatch(4, 3);
+            test.assertNotNull(match2, "케이스 2: 8+9=17, 배치한 숫자 7 -> 매치 성공");
+            
+            // 케이스 3: 3+4=7, 배치한 숫자 5 -> 매치 실패
+            game.board = Array(9).fill(null).map(() => Array(9).fill(null));
+            game.board[4][4] = 3;
+            game.board[4][5] = 4;
+            game.board[5][4] = 5; // 새로 배치
+            
+            const match3 = game.checkMatch(5, 4);
+            test.assertEqual(match3, null, "케이스 3: 3+4=7, 배치한 숫자 5 -> 매치 실패");
+            
+            // 케이스 4: 1+2+3+4=10, 일의 자리 0 -> 매치 성공
+            game.board = Array(9).fill(null).map(() => Array(9).fill(null));
+            game.board[3][4] = 1;
+            game.board[4][3] = 2;
+            game.board[4][5] = 3;
+            game.board[5][4] = 4;
+            game.board[4][4] = 0; // 새로 배치
+            
+            const match4 = game.checkMatch(4, 4);
+            test.assertNotNull(match4, "케이스 4: 1+2+3+4=10, 배치한 숫자 0 -> 매치 성공");
+            if (match4) {
+                test.assertEqual(match4.length, 5, "케이스 4: 제거되는 타일은 5개");
+            }
+            
+            return { title: "Test 3: 매치 로직", results: test.getResults() };
+        }
+
+        // Test 4: 점수 계산 테스트
+        function testScoring() {
+            const test = new TestRunner();
+            const game = new TestGame();
+            
+            game.board = Array(9).fill(null).map(() => Array(9).fill(null));
+            game.score = 0;
+            
+            // 3개 타일 제거 -> 30점
+            const cells1 = [[4,4], [4,5], [5,4]];
+            game.applyClear(cells1);
+            
+            setTimeout(() => {
+                test.assertEqual(game.score, 30, "3개 타일 제거 시 30점 획득");
+            }, 1000);
+            
+            return { title: "Test 4: 점수 계산 (비동기, 1초 후 확인)", results: test.getResults() };
+        }
+
+        // Test 5: 완전 클리어 종료 조건
+        function testClearCondition() {
+            const test = new TestRunner();
+            const game = new TestGame();
+            
+            // 모든 타일 제거
+            game.board = Array(9).fill(null).map(() => Array(9).fill(null));
+            game.score = 100;
+            game.checkEndCondition();
+            
+            test.assertEqual(game.gameStatus, 'cleared', "모든 타일 제거 시 게임 상태는 cleared");
+            test.assertEqual(game.score, 600, "클리어 보너스 500점 추가 (100 + 500 = 600)");
+            
+            return { title: "Test 5: 완전 클리어 종료 조건", results: test.getResults() };
+        }
+
+        // Test 6: 게임 오버 종료 조건
+        function testGameOverCondition() {
+            const test = new TestRunner();
+            const game = new TestGame();
+            
+            // 모든 타일 채우기
+            game.board = Array(9).fill(null).map(() => Array(9).fill(5));
+            game.checkEndCondition();
+            
+            test.assertEqual(game.gameStatus, 'gameover', "보드가 가득 찬 경우 게임 상태는 gameover");
+            
+            return { title: "Test 6: 게임 오버 종료 조건", results: test.getResults() };
+        }
+
+        // Test 7: 숫자 스트림 테스트
+        function testNumberStream() {
+            const test = new TestRunner();
+            const game = new TestGame();
+            
+            test.assertEqual(game.stream.length, 4, "초기 스트림 길이는 4");
+            
+            const firstNumber = game.stream[0];
+            game.stream.shift();
+            game.addToStream();
+            
+            test.assertEqual(game.stream.length, 4, "숫자 배치 후 스트림 길이 유지 (4)");
+            test.assert(game.stream[0] !== undefined, "스트림의 첫 번째 숫자는 항상 존재");
+            
+            return { title: "Test 7: 숫자 스트림", results: test.getResults() };
+        }
+
+        // Test 8: 시뮬레이션 - 실제 게임 플레이
+        function testGameSimulation() {
+            const test = new TestRunner();
+            const game = new TestGame();
+            
+            // 특정 보드 상태 설정
+            game.board = Array(9).fill(null).map(() => Array(9).fill(null));
+            
+            // 매치가 성공할 수 있는 상황 설정
+            game.board[4][4] = 5;
+            game.board[4][5] = 5;
+            game.stream = [0, 1, 2, 3]; // 5+5=10, 일의 자리 0
+            
+            const boardBefore = displayBoard(game.board, "배치 전 보드");
+            
+            // (5, 4) 위치에 0 배치 -> 매치 성공 예상
+            const initialMoves = game.moves;
+            game.placeNumber(5, 4);
+            
+            test.assertEqual(game.moves, initialMoves + 1, "배치 횟수 증가");
+            
+            // 비동기로 제거 확인
+            setTimeout(() => {
+                const filledCount = game.getRemainingTiles();
+                test.assertEqual(filledCount, 0, "매치 성공 후 타일 제거 확인");
+                
+                const boardAfter = displayBoard(game.board, "배치 후 보드");
+                
+                const resultsDiv = document.getElementById('results');
+                const simDiv = document.createElement('div');
+                simDiv.className = 'test-case';
+                simDiv.innerHTML = `
+                    <h3>Test 8: 게임 시뮬레이션</h3>
+                    ${boardBefore}
+                    <div class="info">배치: (5, 4)에 숫자 0 배치<br>예상: 5+5=10, 일의 자리 0 매치 성공</div>
+                    ${boardAfter}
+                    ${renderResults(test.getResults())}
+                `;
+                resultsDiv.appendChild(simDiv);
+            }, 1500);
+            
+            return { title: "Test 8: 게임 시뮬레이션 (비동기, 1.5초 후 확인)", results: test.getResults(), skipRender: true };
+        }
+
+        function renderResults(results) {
+            let html = '';
+            results.forEach(result => {
+                const className = result.pass ? 'pass' : 'fail';
+                const icon = result.pass ? '✓' : '✗';
+                html += `<div class="test-result ${className}">${icon} ${result.message}</div>`;
+            });
+            return html;
+        }
+
+        function runAllTests() {
+            clearResults();
+            
+            const tests = [
+                testInitialBoard,
+                testNeighbours,
+                testMatchLogic,
+                testScoring,
+                testClearCondition,
+                testGameOverCondition,
+                testNumberStream,
+                testGameSimulation
+            ];
+            
+            const resultsDiv = document.getElementById('results');
+            let totalPass = 0;
+            let totalFail = 0;
+            
+            tests.forEach(testFunc => {
+                const result = testFunc();
+                
+                if (!result.skipRender) {
+                    const testDiv = document.createElement('div');
+                    testDiv.className = 'test-case';
+                    testDiv.innerHTML = `
+                        <h3>${result.title}</h3>
+                        ${renderResults(result.results)}
+                    `;
+                    resultsDiv.appendChild(testDiv);
+                }
+                
+                result.results.forEach(r => {
+                    if (r.pass) totalPass++;
+                    else totalFail++;
+                });
+            });
+            
+            // 요약 추가
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'test-section';
+            summaryDiv.innerHTML = `
+                <h2>테스트 요약</h2>
+                <div class="info">
+                    <strong>총 ${totalPass + totalFail}개 테스트</strong><br>
+                    ✓ 통과: ${totalPass}<br>
+                    ✗ 실패: ${totalFail}<br>
+                    성공률: ${((totalPass / (totalPass + totalFail)) * 100).toFixed(1)}%
+                </div>
+            `;
+            resultsDiv.insertBefore(summaryDiv, resultsDiv.firstChild);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // 페이지 로드 시 자동 실행
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('테스트 페이지 로드됨. "전체 테스트 실행" 버튼을 클릭하세요.');
+        });
+    </script>
+</body>
+</html>
