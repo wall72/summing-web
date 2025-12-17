@@ -2,75 +2,87 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Summing Web Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Summing Mobile</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Summing Web Edition</h1>
-            <div class="info-panel">
-                <div class="info-item">
-                    <span class="label">점수:</span>
-                    <span id="score" class="value">0</span>
+    <!-- 게임 화면 -->
+    <div id="gameScreen" class="screen">
+        <div class="game-container">
+            <header class="game-header">
+                <h1>Summing Mobile</h1>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label">점수</span>
+                        <span id="score" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">배치</span>
+                        <span id="moves" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">남은타일</span>
+                        <span id="remaining" class="stat-value">49</span>
+                    </div>
                 </div>
-                <div class="info-item">
-                    <span class="label">배치 횟수:</span>
-                    <span id="moves" class="value">0</span>
-                </div>
-                <div class="info-item">
-                    <span class="label">남은 타일:</span>
-                    <span id="remaining" class="value">49</span>
-                </div>
-            </div>
-        </header>
+            </header>
 
-        <main>
-            <div class="game-area">
-                <div class="stream-panel">
+            <div class="game-content">
+                <div class="stream-horizontal">
                     <div class="stream-label">다음 숫자</div>
-                    <div class="current-number" id="currentNumber">5</div>
-                    <div class="upcoming-numbers">
-                        <div class="stream-label-small">이후 숫자</div>
-                        <div class="upcoming-list" id="upcomingNumbers">
-                            <span class="upcoming-number">3</span>
-                            <span class="upcoming-number">7</span>
-                            <span class="upcoming-number">2</span>
-                        </div>
+                    <div class="stream-numbers" id="streamNumbers">
+                        <span class="stream-num current">5</span>
+                        <span class="stream-num">3</span>
+                        <span class="stream-num">7</span>
+                        <span class="stream-num">2</span>
+                        <span class="stream-num">8</span>
                     </div>
                 </div>
 
-                <div class="board-container">
+                <div class="board-wrapper">
                     <div id="board" class="board"></div>
-                    <div id="gameStatus" class="game-status hidden"></div>
                 </div>
             </div>
-
-            <div class="controls">
-                <button id="newGameBtn" class="btn btn-primary">새 게임</button>
-                <button id="pauseBtn" class="btn btn-secondary hidden">일시정지</button>
-            </div>
-
-            <div class="records-panel">
-                <h3>기록</h3>
-                <div class="record-item">
-                    <span class="record-label">최고 점수:</span>
-                    <span id="highScore" class="record-value">0</span>
-                </div>
-                <div class="record-item">
-                    <span class="record-label">최소 배치 횟수:</span>
-                    <span id="bestMoves" class="record-value">-</span>
-                </div>
-            </div>
-        </main>
+        </div>
     </div>
 
-    <div id="overlay" class="overlay hidden">
-        <div class="modal">
-            <h2 id="modalTitle">게임 종료</h2>
-            <p id="modalMessage"></p>
-            <button id="modalCloseBtn" class="btn btn-primary">확인</button>
+    <!-- 리더보드 화면 -->
+    <div id="leaderboardScreen" class="screen hidden">
+        <div class="leaderboard-container">
+            <header class="leaderboard-header">
+                <h1>🏆 리더보드</h1>
+            </header>
+
+            <div class="game-result" id="gameResult">
+                <h2 id="resultTitle">게임 종료</h2>
+                <div class="result-stats">
+                    <div class="result-item">
+                        <span class="result-label">최종 점수</span>
+                        <span id="finalScore" class="result-value">0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">배치 횟수</span>
+                        <span id="finalMoves" class="result-value">0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">남은 타일</span>
+                        <span id="finalRemaining" class="result-value">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="leaderboard-list">
+                <h3>최고 기록</h3>
+                <div id="leaderboardEntries" class="entries"></div>
+            </div>
+
+            <div class="leaderboard-actions">
+                <button id="newGameBtn" class="btn btn-primary">새 게임</button>
+                <button id="continueBtn" class="btn btn-secondary hidden">게임 계속하기</button>
+            </div>
         </div>
     </div>
 
