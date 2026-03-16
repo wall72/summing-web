@@ -1,213 +1,88 @@
-# Summing Mobile 🎮
+﻿# Summing Mobile
 
-원작 "Summing for PalmOS" 및 터미널용 Summing 게임의 룰을 기반으로 한 모바일 최적화 브라우저 퍼즐 게임입니다.
+Summing Mobile is a small browser puzzle game inspired by classic number-placement gameplay. You place the current number on a 9x9 board and clear tiles when the last digit of the neighbour sum matches the placed number.
 
-## 🎯 게임 소개
+## Gameplay
 
-9×9 보드에서 숫자를 배치하여 이웃 숫자들의 합과 매치시키는 퍼즐 게임입니다. 전략적으로 숫자를 배치하여 최대한 많은 타일을 제거하고 높은 점수를 획득하세요!
+- Board size: 9x9
+- Initial state: the centered 7x7 area is filled with random digits from 0 to 9
+- Stream length: 5 numbers
+- Neighbours: all 8 surrounding tiles count
+- Match rule: after placing a number, sum all filled neighbouring tiles; if `sum % 10` equals the placed number, the placed tile and those neighbours are removed
+- Score: `10 * cleared tile count`
+- Clear bonus: `+500` when the board becomes empty
+- Game over: the board reaches 81 filled tiles
 
-**모바일 웹 앱 최적화** - Portrait/Landscape 모드 지원, 파스텔 POP 디자인
+## Current Features
 
-## 🎲 게임 규칙
+- Responsive single-page layout for portrait and landscape play
+- Animated tile placement, match, and removal states
+- Local leaderboard stored in `localStorage`
+- Saved in-progress game restored from `localStorage`
+- Browser test page for basic logic checks
+- Defensive recovery when saved JSON is corrupted
 
-### 기본 구성
-- **보드**: 9×9 그리드
-- **초기 상태**: 중앙 7×7 영역에 랜덤 숫자(0-9) 배치
-- **숫자 스트림**: 
-  - Portrait 모드: 현재 배치할 숫자 1개 + 다음 숫자 2~4개 (화면 크기에 따라 반응형)
-  - Landscape 모드: 게임판 왼쪽에 세로로 3~5개 표시 (디바이스 크기에 따라 반응형)
+## Run Locally
 
-### 플레이 방법
-1. 빈 칸을 클릭하여 현재 숫자를 배치합니다
-2. 배치한 숫자와 이웃 숫자들의 합을 계산합니다
-3. **매치 조건**: 이웃 숫자들의 합의 일의 자리가 배치한 숫자와 같으면 매치 성공!
-4. 매치 성공 시 배치한 타일과 모든 이웃 타일이 제거됩니다
+You can open `index.html` directly in a browser, but serving the files over a local HTTP server is recommended.
 
-### 이웃 정의
-8방향(상/하/좌/우/대각선) 모두 포함
+### Python
 
-```
-□ □ □
-□ ★ □  ← ★ 위치의 이웃은 주변 8칸
-□ □ □
-```
-
-### 매치 예시
-```
-배치 전:
-  3 4
-  ? 
-
-현재 숫자: 7
-(5,4) 위치에 7 배치
-→ 이웃 합: 3 + 4 = 7
-→ 일의 자리: 7
-→ 배치한 숫자: 7
-→ 매치 성공! 3개 타일 모두 제거
+```bash
+python -m http.server 8000
 ```
 
-### 점수 계산
-- **타일 제거**: 제거된 타일 개수 × 10점
-- **완전 클리어 보너스**: +500점
+### Node.js
 
-### 종료 조건
-- ✅ **완승**: 모든 타일 제거
-- ❌ **게임 오버**: 보드가 가득 참 (더 이상 배치 불가)
-
-## 🚀 실행 방법
-
-### 로컬에서 실행
-
-1. **파일 다운로드**
-   ```bash
-   git clone <repository-url>
-   cd copilot-summing-prd
-   ```
-
-2. **로컬 서버 실행**
-   
-   Python 사용:
-   ```bash
-   python -m http.server 8000
-   ```
-   
-   또는 Node.js 사용:
-   ```bash
-   npx http-server -p 8000
-   ```
-
-3. **브라우저에서 접속**
-   ```
-   http://localhost:8000
-   ```
-
-### 간편 실행 (브라우저에서 직접 열기)
-`index.html` 파일을 브라우저로 드래그하여 바로 실행할 수 있습니다.
-
-## 🧪 테스트 실행
-
-테스트 페이지에서 게임 로직을 검증할 수 있습니다:
-
+```bash
+npx http-server -p 8000
 ```
+
+Then open:
+
+```text
+http://localhost:8000
+```
+
+## Test Page
+
+Open the lightweight browser test page at:
+
+```text
 http://localhost:8000/test.html
 ```
 
-### 포함된 테스트
-- ✅ 초기 보드 상태 확인
-- ✅ 이웃 계산 로직
-- ✅ 매치 로직 (다양한 케이스)
-- ✅ 점수 계산
-- ✅ 완전 클리어 종료 조건
-- ✅ 게임 오버 종료 조건
-- ✅ 숫자 스트림 관리
-- ✅ 게임 시뮬레이션
+The current test page checks:
 
-## 📁 프로젝트 구조
+- board initialization
+- stream length
+- match detection
+- non-match detection
+- clear scoring without bonus leakage
+- clear-state bonus handling
 
-```
-copilot-summing-prd/
-├── index.html      # 메인 게임 페이지
-├── styles.css      # 스타일시트
-├── game.js         # 게임 로직
-├── test.html       # 테스트 페이지
-├── PRD.md          # 제품 요구사항 문서
-└── README.md       # 이 파일
-```
+## Project Structure
 
-## 🎨 주요 기능
-
-### 게임 플레이
-- 직관적인 클릭/터치 기반 인터페이스
-- 실시간 점수 및 통계 표시
-- 부드러운 애니메이션 효과
-- 완전 반응형 디자인 (모바일/태블릿/데스크톱)
-- **Portrait/Landscape 모드 자동 전환**
-  - Portrait: 헤더 → 스트림 → 게임판 수직 배치
-  - Landscape: 헤더 + (스트림 왼쪽 | 게임판 오른쪽) 수평 배치
-
-### 리더보드 시스템
-- **JSON 기반 리더보드**: 최대 20개 엔트리 저장 (LocalStorage)
-- **정렬 우선순위**: 점수 내림차순 → 배치 횟수 오름차순 → 날짜 최신순
-- **게임 상태 자동 저장**: 매 턴마다 게임 상태 저장 및 복원
-- **두 화면 구조**: 게임 화면 ↔ 리더보드 화면 전환
-
-### 파스텔 POP 디자인
-- **배경**: 피치/살구색 그라데이션
-- **타이틀**: Comic Sans MS 폰트, 핑크-옐로우 그라데이션
-- **숫자 타일**: 핑크-코랄 그라데이션 (붉은 파스텔 톤)
-- **스트림 패널**: 흰색 배경, 퍼플 계열 액센트
-- **버튼**: 핑크/퍼플 그라데이션
-- **전체적으로 부드럽고 밝은 파스텔 컬러 팔레트**
-
-### 반응형 최적화
-- **스마트폰 Portrait**: 다음 숫자 3~5개 (화면 너비에 따라)
-- **스마트폰 Landscape**: 다음 숫자 3개 (높이 480px 이하)
-- **태블릿/데스크톱 Landscape**: 다음 숫자 5개
-- **폰트 크기**: 화면 크기에 따라 자동 조정
-- **게임판**: 화면 내에 항상 완전히 표시되도록 자동 조정
-
-## 🎮 게임 팁
-
-1. **미리 계획하기**: 다음에 나올 숫자들을 확인하여 전략을 세우세요
-2. **큰 매치 노리기**: 여러 이웃이 있는 위치에 배치하면 더 많은 타일을 제거할 수 있습니다
-3. **외곽 활용**: 초기에 비어있는 외곽 칸을 전략적으로 활용하세요
-4. **일의 자리 계산**: 빠른 계산을 위해 일의 자리만 주목하세요
-   - 예: 8 + 9 = 17 → 일의 자리는 7
-5. **화면 회전**: 스마트폰에서는 Landscape 모드가 더 플레이하기 편할 수 있습니다
-
-## 🛠️ 기술 스택
-
-- **프론트엔드**: HTML5, CSS3, Vanilla JavaScript (ES6+)
-- **스타일링**: CSS Grid, Flexbox, CSS Animations, Media Queries
-- **반응형**: Orientation-based layouts, Viewport-based breakpoints
-- **저장소**: LocalStorage API (게임 상태, JSON 리더보드)
-- **모바일 최적화**: PWA meta tags, touch-action, safe-area-inset
-- **폰트**: Comic Sans MS (타이틀), System fonts (본문)
-- **브라우저 호환성**: Chrome, Edge, Firefox, Safari (최신 2버전)
-
-## 📊 게임 통계 예시
-
-```
-점수: 1,250
-배치 횟수: 45
-남은 타일: 12
-
-리더보드 (Top 20)
-1. 2,300점 (38배치) - 2025-12-17
-2. 1,890점 (42배치) - 2025-12-16
-3. 1,250점 (45배치) - 2025-12-17
+```text
+.
+|-- index.html
+|-- styles.css
+|-- game.js
+|-- test.html
+|-- README.md
+`-- PRD.md
 ```
 
-## 🔧 커스터마이징
+## Known Limitations
 
-### 난이도 조정
-`game.js`의 `initBoard()` 메서드를 수정하여 초기 숫자 분포를 변경할 수 있습니다.
+- No undo or hint system
+- No server-backed leaderboard
+- No keyboard controls
+- UI copy is currently in English only
 
-### 점수 규칙 변경
-`applyClear()` 메서드에서 점수 계산 로직을 수정할 수 있습니다:
-```javascript
-const points = cells.length * 10; // 타일당 10점
-```
+## Recent Fixes
 
-### 보드 크기 변경
-상수 값을 수정하여 보드 크기를 변경할 수 있습니다:
-```javascript
-const BOARD_SIZE = 9;           // 전체 보드 크기
-const INITIAL_GRID_SIZE = 7;    // 초기 숫자 영역
-```
-
-## 📝 라이선스
-
-이 프로젝트는 "Summing for PalmOS" 게임의 규칙을 기반으로 제작되었습니다.
-
-## 🤝 기여
-
-버그 리포트나 기능 제안은 이슈로 등록해주세요!
-
-## 📧 문의
-
-프로젝트 관련 문의사항이 있으시면 이슈를 생성해주세요.
-
----
-
-**즐거운 게임 되세요! 🎉**
+- fixed broken HTML/test page markup caused by encoding issues
+- fixed move-lock sequencing so repeated placements work
+- fixed match animation flow to avoid premature rerender
+- added recovery for corrupted saved game and leaderboard data

@@ -1,654 +1,167 @@
-# Summing Mobile - Product Requirements Document (PRD)
+﻿# Summing Mobile PRD
 
-## 문서 정보
-- **제품명**: Summing Mobile
-- **버전**: v1.1 (UI 개선 및 반응형 최적화)
-- **최종 업데이트**: 2025-12-17
-- **상태**: ✅ 구현 완료 및 테스트 완료
+## 1. Product Summary
 
----
+- Product: Summing Mobile
+- Platform: modern desktop and mobile browsers
+- Genre: number-placement puzzle
+- Implementation: static HTML, CSS, and vanilla JavaScript
+- Storage: browser `localStorage`
 
-## 1. 개요
+## 2. Product Goal
 
-### 1.1 제품 소개
-- **제품명**: Summing Mobile
-- **원작**: "Summing for PalmOS" 및 터미널용 Summing 게임의 룰을 기반으로 한 모바일 최적화 브라우저 퍼즐 게임
-- **플랫폼**: 웹 브라우저 (모바일/태블릿/데스크톱)
-- **디자인**: 파스텔 POP 스타일, Portrait/Landscape 모드 지원
+Deliver a lightweight browser game that is easy to open locally, plays well on mobile screens, and preserves basic player progress without any backend.
 
-### 1.2 목표
-- 사용자가 웹 브라우저에서 Summing 게임을 직관적 UI로 즐길 수 있도록 한다
-- 원작의 핵심 규칙(7×7 숫자 그리드, 9×9 보드, 랜덤 숫자 스트림, 인접 합의 일의 자리 규칙)을 충실히 구현한다
-- 웹 환경에 맞는 시각적 피드백과 애니메이션을 제공한다
-- JSON 기반 리더보드와 게임 상태 자동 저장 시스템을 제공한다
-- 모바일 우선 반응형 디자인으로 모든 디바이스에서 최적의 경험을 제공한다
+## 3. Core Rules
 
-### 1.3 주요 특징
-- ✅ 터치/클릭 기반의 직관적인 게임플레이
-- ✅ 실시간 점수 및 통계 표시
-- ✅ 부드러운 애니메이션 효과 (타일 배치, 매치, 제거)
-- ✅ 완전 반응형 디자인 (모바일/태블릿/데스크톱)
-- ✅ Portrait/Landscape 모드 자동 최적화
-- ✅ JSON 기반 리더보드 (최대 20개 엔트리)
-- ✅ 게임 상태 자동 저장 및 복원
-- ✅ 파스텔 POP 디자인 (밝고 부드러운 색상)
-- ✅ 종합 테스트 스위트 포함
+### 3.1 Board
 
----
+- The board is a 9x9 grid.
+- A new game starts with the centered 7x7 area filled.
+- Filled cells contain random digits from 0 to 9.
+- The outer ring starts empty.
 
-## 2. 게임 규칙 명세
+### 3.2 Number Stream
 
-### 2.1 기본 개념
+- The visible stream contains 5 digits.
+- The first digit is the active number to place.
+- After each move, the active digit is removed and one new random digit is appended.
 
-#### 2.1.1 보드 구성
-- **크기**: 9×9 타일 그리드
-- **초기 상태**: 중앙 7×7 영역(49개 타일)에 랜덤 숫자(0~9) 배치
-- **외곽 영역**: 테두리 1칸(32개 타일)은 빈 상태로 시작
-- **확장 가능성**: 외곽 영역은 향후 특수 타일 또는 파워업 용도로 활용 가능
+### 3.3 Placement
 
-#### 2.1.2 숫자 스트림
-- **표시 개수**: 
-  - 총 5개 숫자 (현재 배치할 숫자 1개 + 다음 숫자 4개)
-  - 화면 크기에 따라 표시 개수 자동 조정 (3~5개)
-- **숫자 범위**: 0~9 (정수)
-- **생성 방식**: 완전 랜덤 생성
-- **UI 위치**: 
-  - Portrait 모드: 게임판 위쪽, 가로 배치
-  - Landscape 모드: 게임판 왼쪽, 세로 배치
-- **반응형 표시**:
-  - 스마트폰 Portrait (320px 이하): 3개
-  - 스마트폰 Portrait (321-359px): 4개
-  - 스마트폰 Portrait (360px+): 5개
-  - 스마트폰 Landscape (높이 480px 이하): 3개
-  - 태블릿/데스크톱 Landscape: 5개
-- **업데이트**: 숫자 배치 시마다 스트림에서 제거하고 새 숫자 추가
+- The player may place the active number only on an empty cell.
+- While a move is resolving, further input is locked.
 
-#### 2.1.3 이웃(Neighbour) 정의
-- **기본 규칙**: 8방향 모두 포함 (상/하/좌/우/대각선)
-- **이웃 수**:
-  - 중앙 위치: 8개
-  - 가장자리: 5개
-  - 코너: 3개
+### 3.4 Match Resolution
 
-```
-이웃 관계 예시:
-□ □ □
-□ ★ □  ← ★ 위치의 이웃은 주변 8칸
-□ □ □
-```
+- Neighbours include the 8 surrounding cells.
+- After placement, gather all filled neighbours.
+- Compute the sum of neighbour digits.
+- If `sum % 10` equals the placed digit, the placed cell and all filled neighbours are cleared.
+- If there are no filled neighbours, the move cannot match.
 
-### 2.2 플레이 규칙
+### 3.5 Scoring
 
-#### 2.2.1 초기 상태
-게임 시작 시:
-- 중앙 7×7 영역에 무작위 숫자 타일(0~9) 49개 배치
-- 외곽 32개 타일은 빈 상태
-- 점수: 0점
-- 배치 횟수: 0회
-- 게임 상태: 'playing'
+- Clearing tiles grants `10 * cleared tile count` points.
+- Clearing the entire board grants an additional `500` points.
 
-#### 2.2.2 플레이어의 턴
-1. 현재 숫자를 확인 (스트림의 첫 번째 숫자)
-2. 9×9 보드의 빈 타일 중 하나를 클릭하여 배치
-3. 배치 후 매치 판정 자동 실행
-4. 배치 횟수 증가
+### 3.6 End Conditions
 
-#### 2.2.3 매치 규칙 (구현 완료)
-**매치 조건**:
-- 새로 배치한 타일의 이웃에 있는 모든 숫자의 합을 계산
-- 합의 일의 자리가 배치한 숫자와 같으면 매치 성공
+- `cleared`: no filled tiles remain on the board.
+- `gameover`: all 81 board cells are filled.
 
-**매치 성공 시**:
-1. 배치한 타일과 모든 이웃 숫자 타일을 제거
-2. 제거 애니메이션 재생 (0.5초 매치 애니메이션 + 0.4초 제거 애니메이션)
-3. 점수 증가 (제거된 타일 개수 × 10점)
-4. 종료 조건 확인
+## 4. Persistence Requirements
 
-**매치 실패 시**:
-1. 배치한 타일만 보드에 남음
-2. 점수 변동 없음
-3. 다음 턴 진행
+### 4.1 Saved Game
 
-**매치 예시**:
-```
-배치 전:
-  3 4
-  ? 
+Store these fields in `localStorage` under `currentGame`:
 
-현재 숫자: 7
-(5,4) 위치에 7 배치
-→ 이웃 합: 3 + 4 = 7
-→ 일의 자리: 7
-→ 배치한 숫자: 7
-→ 매치 성공! 3개 타일 모두 제거 → 30점 획득
-```
+- `board`
+- `stream`
+- `score`
+- `moves`
+- `gameStatus`
+- `savedAt`
 
-#### 2.2.4 종료 조건 (구현 완료)
-게임은 다음 중 하나가 발생하면 종료:
+Behaviour:
 
-1. **완전 클리어 (cleared)**
-   - 조건: 보드에 남은 숫자 타일이 0개
-   - 보너스: +500점
-   - 메시지: "축하합니다! 보드를 완전히 비웠습니다!"
-   - 최소 배치 횟수 기록 갱신
+- restore only saved games whose status is `playing`
+- if saved JSON is corrupted, discard it and start a new game
 
-2. **게임 오버 (gameover)**
-   - 조건: 보드의 81개 타일이 모두 숫자로 채워짐
-   - 메시지: "보드가 가득 찼습니다."
-   - 기록 저장
+### 4.2 Leaderboard
 
-### 2.3 점수 시스템 (구현 완료)
+Store leaderboard entries in `localStorage` under `leaderboard`.
 
-#### 2.3.1 점수 계산
-- **타일 제거**: 제거된 타일 개수 × 10점
-- **완전 클리어 보너스**: +500점
-- **예시**:
-  - 3개 타일 제거 → 30점
-  - 5개 타일 제거 → 50점
-  - 완전 클리어 시 총점 = 게임 중 획득 점수 + 500점
+Entry schema:
 
-#### 2.3.2 기록 지표
-- **JSON 리더보드**: LocalStorage에 최대 20개 엔트리 저장
-  - 각 엔트리: { score, moves, remaining, date, status }
-  - 정렬: 점수 내림차순 → 배치 횟수 오름차순 → 날짜 최신순
-- **게임 상태 자동 저장**: 매 턴마다 게임 상태를 LocalStorage에 저장
-  - 저장 항목: 보드 상태, 점수, 배치 횟수, 숫자 스트림
-  - 복원: 페이지 재로드 시 자동으로 이전 게임 상태 복원
-- **실시간 통계**:
-  - 현재 점수
-  - 배치 횟수
-  - 남은 타일 수
-
----
-
-## 3. 기능 요구사항 (구현 완료)
-
-### 3.1 게임 플레이 UI
-
-#### 3.1.1 보드 영역 ✅
-- **구현**: CSS Grid로 9×9 그리드 구현
-- **타일 크기**: 
-  - 데스크톱: 50×50px
-  - 태블릿: 40×40px
-  - 모바일: 32×32px
-- **상태 표시**:
-  - 빈 타일: 흰색 배경, 호버 시 확대 효과
-  - 숫자 타일: 그라데이션 배경(#667eea → #764ba2), 흰색 텍스트
-- **애니메이션**:
-  - 배치: scale(0 → 1.1 → 1) 0.3초
-  - 매치: scale(1 → 1.1 → 1.05 → 1) 0.5초, 발광 효과
-  - 제거: scale(1 → 1.2 → 0) + rotate(45deg) 0.4초
-
-#### 3.1.2 숫자 스트림 패널 ✅
-- **위치**: 좌측 패널
-- **현재 숫자**: 
-  - 큰 크기 표시 (4rem)
-  - 그라데이션 색상
-  - 박스 쉐도우 효과
-- **다음 숫자**: 
-  - 세로로 3개 나열
-  - 중간 크기 (1.5rem)
-  - 보라색 계열
-
-#### 3.1.3 정보 패널 ✅
-- **상단 헤더**:
-  - 점수 (실시간 업데이트)
-  - 배치 횟수 (실시간 업데이트)
-  - 남은 타일 수 (실시간 업데이트)
-- **스타일**: 카드 형태, 라운드 코너, 그림자 효과
-
-#### 3.1.4 기록 패널 ✅
-- **표시 항목**:
-  - 최고 점수
-  - 최소 배치 횟수 (클리어 기록이 있을 경우)
-- **위치**: 하단
-- **스타일**: 흰색 배경, 라운드 코너
-
-### 3.2 게임 흐름 제어 (구현 완료)
-
-#### 3.2.1 새 게임 시작 ✅
-- **버튼**: "새 게임" (그라데이션 배경)
-- **동작**:
-  1. 보드 초기화 (중앙 7×7 랜덤 숫자 배치)
-  2. 스트림 생성 (4개 랜덤 숫자)
-  3. 점수/배치 횟수 0으로 초기화
-  4. 게임 상태를 'playing'으로 설정
-  5. 모달 닫기 (열려있는 경우)
-
-#### 3.2.2 게임 종료 ✅
-- **모달 표시**:
-  - 반투명 오버레이
-  - 중앙 모달 창
-  - 제목: "완승!" 또는 "게임 오버"
-  - 메시지: 최종 점수 및 배치 횟수
-  - 확인 버튼
-
-### 3.3 기록 저장 (구현 완료)
-
-#### 3.3.1 LocalStorage 사용 ✅
-- **저장 항목**:
-  - `highScore`: 최고 점수 (정수)
-  - `bestMoves`: 최소 배치 횟수 (정수 또는 null)
-- **저장 시점**:
-  - 게임 종료 시 (cleared 또는 gameover)
-  - 기존 기록보다 높을 경우에만 갱신
-- **로드 시점**: 게임 초기화 시
-
----
-
-## 4. 비기능 요구사항 (구현 완료)
-
-### 4.1 기술 스택
-
-#### 4.1.1 구현 완료 ✅
-- **언어**: Vanilla JavaScript (ES6+)
-- **마크업**: HTML5
-- **스타일**: CSS3 (Grid, Flexbox, Animations)
-- **저장소**: LocalStorage API
-- **빌드 도구**: 없음 (순수 HTML/CSS/JS)
-
-#### 4.1.2 파일 구조 ✅
-```
-copilot-summing-prd/
-├── index.html      # 메인 게임 페이지
-├── styles.css      # 스타일시트 (CSS Grid, 애니메이션)
-├── game.js         # 게임 로직 (SummingGame 클래스)
-├── test.html       # 테스트 스위트
-├── README.md       # 사용자 문서
-└── PRD.md          # 이 문서
-```
-
-### 4.2 성능 및 호환성
-
-#### 4.2.1 성능 ✅
-- **렌더링**: CSS Transition 사용으로 GPU 가속
-- **애니메이션**: 부드러운 60fps 유지
-- **메모리**: 단일 게임 인스턴스로 메모리 효율적
-- **반응 속도**: 클릭 즉시 반응
-
-#### 4.2.2 브라우저 지원 ✅
-- ✅ Chrome (최신 2버전)
-- ✅ Edge (최신 2버전)
-- ✅ Firefox (최신 2버전)
-- ✅ Safari (최신 2버전)
-- ❌ IE 지원 불필요
-
-#### 4.2.3 반응형 디자인 ✅
-
-**화면 구조**:
-- **두 화면 시스템**: 게임 화면 ↔ 리더보드 화면
-- **Portrait 모드**: 헤더 → 스트림 → 게임판 (수직 배치)
-- **Landscape 모드**: 헤더 + (스트림 왼쪽 | 게임판 오른쪽) (수평 배치)
-
-**Portrait 모드**:
-- 320px 이하: 스트림 3개, 작은 폰트
-- 321-359px: 스트림 4개
-- 360px 이상: 스트림 5개
-- 게임판 크기: 화면 너비에 맞춰 자동 조정
-- 타일 폰트: 1.5rem ~ 1.8rem (반응형)
-
-**Landscape 모드**:
-- 스마트폰 (높이 480px 이하): 스트림 3개
-- 태블릿/데스크톱: 스트림 5개
-- 스트림: 왼쪽에 세로 배치, '다음숫자' 텍스트 세로 쓰기
-- 게임판: 화면 높이에 맞춰 자동 조정 (잘림 없음)
-- 헤더: 타이틀과 통계 상단 배치
-
-**파스텔 POP 디자인**:
-- 배경: 피치/살구색 그라데이션 (#FFE5B4 → #FFDAB9)
-- 타이틀: Comic Sans MS 폰트, 핑크-옐로우 그라데이션 (#FF1493 → #FF6B6B → #FFD93D)
-- 숫자 타일: 핑크-코랄 그라데이션 (#FF6B9D → #FFA07A)
-- 스트림 패널: 흰색 배경, 퍼플 액센트 (#BA68C8, #9C27B0)
-- 통계 패널: 핑크 계열 (#E91E63, #FF4081)
-- 버튼: 핑크/퍼플 그라데이션
-- 리더보드: 핑크 파스텔 배경 (#FFF0F5)
-
----
-
-## 5. 핵심 상태 관리 및 로직 (구현 완료)
-
-### 5.1 게임 상태 (SummingGame 클래스)
-
-#### 5.1.1 상태 변수 ✅
-```javascript
-class SummingGame {
-    board: number[][]         // 9×9 배열, null 또는 0~9
-    stream: number[]          // 길이 5, 0~9 숫자
-    score: number             // 현재 점수
-    moves: number             // 배치 횟수
-    gameStatus: string        // 'playing' | 'cleared' | 'gameover'
-}
-
-class LeaderboardManager {
-    entries: Array<{          // 최대 20개 엔트리
-        score: number
-        moves: number
-        remaining: number
-        date: string
-        status: string
-    }>
+```json
+{
+  "score": 0,
+  "moves": 0,
+  "remaining": 0,
+  "status": "cleared",
+  "date": "2026-03-16T00:00:00.000Z",
+  "timestamp": 0
 }
 ```
 
-### 5.2 주요 메서드 (구현 완료)
+Rules:
 
-#### 5.2.1 초기화 ✅
-- `constructor()`: 게임 초기화, 리더보드 매니저 생성
-- `loadOrStartGame()`: 저장된 게임 상태 복원 또는 새 게임 시작
-- `initElements()`: DOM 요소 참조 및 이벤트 리스너 등록
-- `initBoard()`: 9×9 배열 생성, 중앙 7×7 랜덤 숫자 배치
-- `generateStream()`: 5개 랜덤 숫자 생성
+- keep at most 20 entries
+- sort by higher score first
+- break ties by fewer moves
+- break remaining ties by newer timestamp
+- if leaderboard JSON is corrupted, discard and recreate it
 
-#### 5.2.2 게임 로직 ✅
-- `getNeighbours(row, col)`: 8방향 이웃 좌표 배열 반환
-- `checkMatch(row, col)`: 매치 판정, 제거할 셀 목록 반환 또는 null
-- `placeNumber(row, col)`: 숫자 배치, 매치 판정, 상태 업데이트
-- `applyClear(cells)`: 타일 제거 애니메이션 및 점수 증가
-- `checkEndCondition()`: 종료 조건 확인 (cleared/gameover)
+## 5. UI Requirements
 
-#### 5.2.3 UI 업데이트 ✅
-- `render()`: 보드 및 스트림 렌더링
-- `saveGameState()`: 게임 상태를 LocalStorage에 저장
-- `showLeaderboard()`: 리더보드 화면 전환
-- `renderLeaderboard()`: 리더보드 엔트리 렌더링
-- `getRemainingTiles()`: 남은 타일 수 계산
+### 5.1 Main Game Screen
 
-#### 5.2.4 기록 관리 ✅
-- `LeaderboardManager.addEntry()`: 새 엔트리 추가 (최대 20개)
-- `LeaderboardManager.getEntries()`: 정렬된 엔트리 목록 반환
-- `LeaderboardManager.clear()`: 리더보드 초기화
-- `startNewGame()`: 게임 재시작
+Show:
 
----
+- title
+- score
+- moves
+- remaining tile count
+- 5-number stream
+- interactive board
 
-## 6. 테스트 요구사항 (구현 완료)
+### 5.2 Result Screen
 
-### 6.1 테스트 스위트 (test.html)
+Show:
 
-#### 6.1.1 구현된 테스트 ✅
-1. **Test 1: 초기 보드 상태**
-   - 9×9 보드 크기 확인
-   - 초기 점수/배치 횟수 0 확인
-   - 중앙 7×7 영역 49개 타일 배치 확인
-   - 외곽 32개 타일 빈 상태 확인
+- final title (`Cleared!` or `Game Over`)
+- final score
+- move count
+- remaining tiles
+- top leaderboard entries
+- new game button
 
-2. **Test 2: 이웃 계산**
-   - 중앙 셀 이웃 8개 확인
-   - 코너 셀 이웃 3개 확인
-   - 가장자리 셀 이웃 5개 확인
+### 5.3 Responsive Behaviour
 
-3. **Test 3: 매치 로직**
-   - 케이스 1: 3+4=7, 숫자 7 배치 → 매치 성공
-   - 케이스 2: 8+9=17, 숫자 7 배치 → 매치 성공
-   - 케이스 3: 3+4=7, 숫자 5 배치 → 매치 실패
-   - 케이스 4: 1+2+3+4=10, 숫자 0 배치 → 매치 성공
+- support portrait and landscape layouts
+- keep the board square
+- reduce visible preview count through CSS on narrower screens
+- preserve touch-friendly tap targets
 
-4. **Test 4: 점수 계산**
-   - 3개 타일 제거 시 30점 확인 (비동기)
+## 6. Animation and Input Behaviour
 
-5. **Test 5: 완전 클리어 종료 조건**
-   - 모든 타일 제거 시 gameStatus = 'cleared'
-   - 클리어 보너스 500점 추가 확인
+- tile placement uses a short appear animation
+- matched tiles animate before removal
+- rerender only after the board state is finalized for a resolving move
+- input must remain disabled until the resolving move finishes
 
-6. **Test 6: 게임 오버 종료 조건**
-   - 보드 가득 참 시 gameStatus = 'gameover'
+## 7. Testing Requirements
 
-7. **Test 7: 숫자 스트림**
-   - 초기 스트림 길이 4 확인
-   - 배치 후 스트림 길이 유지 확인
+Maintain a browser-based test page that covers at least:
 
-8. **Test 8: 게임 시뮬레이션**
-   - 실제 플레이 시나리오 테스트
-   - 보드 상태 시각화
+- board initialization
+- stream initialization
+- match detection
+- non-match detection
+- clear scoring
+- clear bonus handling
 
-#### 6.1.2 테스트 실행 방법 ✅
-```
-http://localhost:8000/test.html
-→ "전체 테스트 실행" 버튼 클릭
-→ 8개 테스트 자동 실행
-→ 통과/실패 결과 표시
-```
+## 8. Non-Goals
 
-#### 6.1.3 TestGame 클래스 ✅
-- `SummingGame`을 상속받아 DOM 없이 테스트 가능
-- `initElements()`, `render()`, `showEndMessage()` 등 UI 메서드 오버라이드
-- 게임 로직만 순수하게 테스트
+These are intentionally out of scope for the current version:
 
----
+- account system
+- online leaderboard
+- multiplayer
+- audio
+- undo and hints
+- framework migration
 
-## 7. 릴리즈 범위 및 향후 과제
+## 9. Current Risks
 
-### 7.1 v1.1 스코프 (✅ 완료)
+- logic and rendering are still coupled in one file
+- automated tests are browser-page based rather than CI-friendly
+- localization is not yet restored after the encoding cleanup
 
-#### 7.1.1 구현 완료 항목
-- ✅ 9×9 보드 + 중앙 7×7 초기 숫자 배치
-- ✅ 0~9 숫자 스트림 (현재 1개 + 다음 4개, 총 5개)
-- ✅ 8방향 이웃 매치 로직
-- ✅ 타일 배치/매치/제거 애니메이션
-- ✅ 점수 계산 (타일당 10점, 클리어 보너스 500점)
-- ✅ 종료 조건 (완전 클리어/게임 오버)
-- ✅ JSON 리더보드 시스템 (최대 20개 엔트리)
-- ✅ 게임 상태 자동 저장/복원
-- ✅ 완전 반응형 디자인 (Portrait/Landscape 모드)
-- ✅ 파스텔 POP 디자인 (밝고 부드러운 색상)
-- ✅ 모바일 최적화 (터치, 화면 크기별 반응형)
-- ✅ 종합 테스트 스위트
-- ✅ README.md 및 PRD.md 문서화
+## 10. Next Candidates
 
-### 7.2 향후 개선 아이디어 (v1.2+)
-
-#### 7.2.1 게임플레이 확장
-- [ ] 난이도 선택 (Easy/Normal/Hard)
-  - Easy: 특정 숫자 비중 조정, 매치 쉬운 조합
-  - Hard: 특정 숫자 제한, 매치 어려운 조합
-- [ ] 일일 챌린지 (시드 고정 모드)
-- [ ] 되돌리기(Undo) 기능 (제한적 사용)
-- [ ] 힌트 시스템 (매치 가능한 위치 표시)
-
-#### 7.2.2 UI/UX 개선
-- [ ] 튜토리얼 모드 (단계별 가이드)
-- [ ] 사운드 효과 (배치, 매치, 제거)
-- [ ] 테마 선택 (다크 모드, 색상 테마)
-- [ ] 키보드 조작 지원 (화살표 키 + Enter)
-
-#### 7.2.3 기록 및 통계
-- [ ] 상세 통계 (매치 성공률, 평균 점수 등)
-- [ ] 게임 히스토리 (최근 10게임)
-- [ ] 성취 시스템 (뱃지, 마일스톤)
-
-#### 7.2.4 서버 연동
-- [ ] 온라인 랭킹 시스템
-- [ ] 사용자 계정 (로그인/회원가입)
-- [ ] 멀티플레이어 모드 (경쟁, 협동)
-- [ ] 소셜 공유 (SNS 연동)
-
-#### 7.2.5 기술 개선
-- [ ] TypeScript 전환 (타입 안정성)
-- [ ] React/Vue 리팩토링 (컴포넌트화)
-- [ ] PWA 지원 (오프라인 플레이, 설치)
-- [ ] 애니메이션 최적화 (Canvas/WebGL)
-
-### 7.3 알려진 제한사항
-
-#### 7.3.1 현재 버전 제약
-- 난이도 조정 없음 (완전 랜덤)
-- Undo 기능 없음
-- 서버 연동 없음 (로컬 전용)
-- 사운드 효과 없음
-- 키보드 조작 미지원
-
-#### 7.3.2 기술적 제약
-- IE 미지원 (ES6+ 사용)
-- LocalStorage 의존 (용량 제한 5~10MB)
-- 동기 애니메이션으로 인한 약간의 지연
-
----
-
-## 8. 프로젝트 실행 가이드
-
-### 8.1 로컬 실행
-
-#### 8.1.1 방법 1: Python HTTP 서버
-```bash
-cd copilot-summing-prd
-python -m http.server 8000
-```
-→ `http://localhost:8000` 접속
-
-#### 8.1.2 방법 2: Node.js HTTP 서버
-```bash
-cd copilot-summing-prd
-npx http-server -p 8000
-```
-→ `http://localhost:8000` 접속
-
-#### 8.1.3 방법 3: 직접 열기
-- `index.html`을 브라우저로 드래그 앤 드롭
-
-### 8.2 테스트 실행
-```
-http://localhost:8000/test.html
-```
-→ "전체 테스트 실행" 버튼 클릭
-
----
-
-## 9. 핵심 기능 구현 세부사항
-
-### 9.1 매치 알고리즘 (checkMatch)
-
-```javascript
-checkMatch(row, col) {
-    const placedNumber = this.board[row][col];
-    const neighbours = this.getNeighbours(row, col);
-    
-    // 숫자가 있는 이웃만 필터링
-    const filledNeighbours = neighbours.filter(
-        ([r, c]) => this.board[r][c] !== null
-    );
-    
-    if (filledNeighbours.length === 0) return null;
-    
-    // 이웃 숫자들의 합 계산
-    const sum = filledNeighbours.reduce(
-        (acc, [r, c]) => acc + this.board[r][c], 0
-    );
-    
-    // 일의 자리 비교
-    const lastDigit = sum % 10;
-    
-    if (lastDigit === placedNumber) {
-        return [[row, col], ...filledNeighbours];
-    }
-    
-    return null;
-}
-```
-
-### 9.2 애니메이션 타임라인
-
-```
-타일 배치:
-0ms: placeNumber() 호출
-0ms: 보드에 숫자 추가
-0ms: 'new-tile' 애니메이션 시작 (0.3초)
-300ms: checkMatch() 호출
-
-매치 성공 시:
-300ms: 'matched' 애니메이션 시작 (0.5초)
-800ms: 'removing' 애니메이션 시작 (0.4초)
-1200ms: 타일 제거 완료
-1200ms: 점수 업데이트
-1200ms: 종료 조건 확인
-
-매치 실패 시:
-300ms: 스트림 업데이트
-300ms: 다음 턴
-```
-
-### 9.3 점수 계산 로직
-
-```javascript
-applyClear(cells) {
-    // ... 애니메이션 ...
-    
-    setTimeout(() => {
-        cells.forEach(([row, col]) => {
-            this.board[row][col] = null;
-        });
-        
-        const points = cells.length * 10;
-        this.score += points;
-        
-        this.render();
-        this.checkEndCondition();
-    }, 900); // 애니메이션 완료 대기
-}
-```
-
----
-
-## 10. 변경 이력
-
-### v1.0 (2025-12-17) - 구현 완료
-- ✅ 기본 게임 로직 구현
-- ✅ UI/UX 구현 (반응형 디자인)
-- ✅ 애니메이션 효과
-- ✅ LocalStorage 기록 저장
-- ✅ 테스트 스위트 구현
-- ✅ 문서화 (README.md, PRD.md)
-- 🐛 버그 수정: 타일 제거 후 종료 조건 미확인 문제
-- 🐛 버그 수정: 테스트 페이지 DOM 충돌 문제
-
-### 초기 버전 (2025-12-16)
-- 📝 PRD 작성
-- 🎯 요구사항 정의
-
----
-
-## 부록
-
-### A. 게임플레이 예시 시나리오
-
-```
-초기 상태:
-보드: 중앙 7×7에 랜덤 숫자
-점수: 0
-배치 횟수: 0
-스트림: [5, 3, 7, 2]
-
-턴 1:
-- (4, 3) 위치에 5 배치
-- 이웃: [3, 2] → 합 = 5 → 일의 자리 5
-- 매치 성공! 3개 타일 제거
-- 점수: 30
-- 배치 횟수: 1
-- 스트림: [3, 7, 2, 8]
-
-턴 2:
-- (5, 5) 위치에 3 배치
-- 이웃: [7, 1, 9] → 합 = 17 → 일의 자리 7
-- 매치 실패
-- 점수: 30
-- 배치 횟수: 2
-- 스트림: [7, 2, 8, 4]
-
-... (계속) ...
-
-최종:
-- 모든 타일 제거 성공
-- 점수: 1250 + 500 = 1750
-- 배치 횟수: 45
-- 게임 상태: cleared
-```
-
-### B. 참고 자료
-- 원작: Summing for PalmOS
-- 게임 장르: 수학 퍼즐, 전략 게임
-- 유사 게임: 숫자 매치 퍼즐, 2048, Threes!
-
----
-
-**문서 작성자**: GitHub Copilot  
-**문서 버전**: v1.0  
-**최종 업데이트**: 2025-12-17
+- separate pure game logic from DOM rendering
+- add a real automated test runner
+- restore Korean copy with verified UTF-8 source files
+- add keyboard and accessibility support

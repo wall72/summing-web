@@ -1,7 +1,6 @@
-// 게임 상수
-const BOARD_SIZE = 9;
+﻿const BOARD_SIZE = 9;
 const INITIAL_GRID_SIZE = 7;
-const STREAM_LENGTH = 5; // 5개로 증가
+const STREAM_LENGTH = 5;
 
 class LeaderboardManager {
     constructor() {
@@ -9,8 +8,14 @@ class LeaderboardManager {
     }
 
     load() {
-        const data = localStorage.getItem('leaderboard');
-        return data ? JSON.parse(data) : [];
+        try {
+            const data = localStorage.getItem('leaderboard');
+            return data ? JSON.parse(data) : [];
+        } catch (error) {
+            console.warn('Failed to load leaderboard data. Resetting saved leaderboard.', error);
+            localStorage.removeItem('leaderboard');
+            return [];
+        }
     }
 
     save() {
@@ -22,33 +27,30 @@ class LeaderboardManager {
             score,
             moves,
             remaining,
-            status, // 'cleared' or 'gameover'
+            status,
             date: new Date().toISOString(),
             timestamp: Date.now()
         };
 
         this.entries.push(entry);
         this.entries.sort((a, b) => {
-            // 점수 높은 순
-            if (b.score !== a.score) return b.score - a.score;
-            // 점수 같으면 배치 횟수 적은 순
-            if (a.moves !== b.moves) return a.moves - b.moves;
-            // 둘 다 같으면 최신 순
+            if (b.score !== a.score) {
+                return b.score - a.score;
+            }
+
+            if (a.moves !== b.moves) {
+                return a.moves - b.moves;
+            }
+
             return b.timestamp - a.timestamp;
         });
 
-        // 상위 20개만 유지
         this.entries = this.entries.slice(0, 20);
         this.save();
     }
 
     getTopEntries(count = 10) {
         return this.entries.slice(0, count);
-    }
-
-    clear() {
-        this.entries = [];
-        this.save();
     }
 }
 
@@ -59,61 +61,64 @@ class SummingGame {
         this.score = 0;
         this.moves = 0;
         this.gameStatus = 'playing';
+        this.isResolvingMove = false;
         this.leaderboard = new LeaderboardManager();
-        
+
         this.initElements();
         this.loadOrStartGame();
     }
 
     initElements() {
-        // 게임 화면 요소
         this.gameScreen = document.getElementById('gameScreen');
         this.leaderboardScreen = document.getElementById('leaderboardScreen');
-        
+
         this.boardElement = document.getElementById('board');
         this.scoreElement = document.getElementById('score');
         this.movesElement = document.getElementById('moves');
         this.remainingElement = document.getElementById('remaining');
         this.streamNumbersElement = document.getElementById('streamNumbers');
-        
-        // 리더보드 화면 요소
+
         this.resultTitle = document.getElementById('resultTitle');
         this.finalScore = document.getElementById('finalScore');
         this.finalMoves = document.getElementById('finalMoves');
         this.finalRemaining = document.getElementById('finalRemaining');
         this.leaderboardEntries = document.getElementById('leaderboardEntries');
-        
-        // 버튼
+
         this.newGameBtn = document.getElementById('newGameBtn');
         this.continueBtn = document.getElementById('continueBtn');
-        
-        // 이벤트 리스너
-        this.newGameBtn.addEventListener('click', () => this.startNewGame());
-        this.continueBtn.addEventListener('click', () => this.continueGame());
+
+        if (this.newGameBtn) {
+            this.newGameBtn.addEventListener('click', () => this.startNewGame());
+        }
+
+        if (this.continueBtn) {
+            this.continueBtn.addEventListener('click', () => this.continueGame());
+        }
     }
 
     loadOrStartGame() {
         const savedGame = this.loadGameState();
-        
+
         if (savedGame && savedGame.gameStatus === 'playing') {
-            // 저장된 게임 복원
             this.board = savedGame.board;
             this.stream = savedGame.stream;
             this.score = savedGame.score;
             this.moves = savedGame.moves;
             this.gameStatus = savedGame.gameStatus;
+            this.isResolvingMove = false;
             this.showGameScreen();
             this.render();
-        } else {
-            // 새 게임 시작
-            this.startNewGame();
+            return;
         }
+
+        this.startNewGame();
     }
 
     startNewGame() {
         this.score = 0;
         this.moves = 0;
         this.gameStatus = 'playing';
+        this.isResolvingMove = false;
         this.initBoard();
         this.generateStream();
         this.showGameScreen();
@@ -126,14 +131,12 @@ class SummingGame {
     }
 
     initBoard() {
-        this.board = Array(BOARD_SIZE).fill(null).map(() => 
-            Array(BOARD_SIZE).fill(null)
-        );
+        this.board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
 
         const startIdx = (BOARD_SIZE - INITIAL_GRID_SIZE) / 2;
-        for (let i = startIdx; i < startIdx + INITIAL_GRID_SIZE; i++) {
-            for (let j = startIdx; j < startIdx + INITIAL_GRID_SIZE; j++) {
-                this.board[i][j] = Math.floor(Math.random() * 10);
+        for (let row = startIdx; row < startIdx + INITIAL_GRID_SIZE; row++) {
+            for (let col = startIdx; col < startIdx + INITIAL_GRID_SIZE; col++) {
+                this.board[row][col] = Math.floor(Math.random() * 10);
             }
         }
     }
@@ -157,13 +160,12 @@ class SummingGame {
             [1, -1],  [1, 0],  [1, 1]
         ];
 
-        for (const [dr, dc] of directions) {
-            const newRow = row + dr;
-            const newCol = col + dc;
-            
-            if (newRow >= 0 && newRow < BOARD_SIZE && 
-                newCol >= 0 && newCol < BOARD_SIZE) {
-                neighbours.push([newRow, newCol]);
+        for (const [dRow, dCol] of directions) {
+            const nextRow = row + dRow;
+            const nextCol = col + dCol;
+
+            if (nextRow >= 0 && nextRow < BOARD_SIZE && nextCol >= 0 && nextCol < BOARD_SIZE) {
+                neighbours.push([nextRow, nextCol]);
             }
         }
 
@@ -173,70 +175,70 @@ class SummingGame {
     checkMatch(row, col) {
         const placedNumber = this.board[row][col];
         const neighbours = this.getNeighbours(row, col);
-        
-        const filledNeighbours = neighbours.filter(
-            ([r, c]) => this.board[r][c] !== null
-        );
+        const filledNeighbours = neighbours.filter(([nRow, nCol]) => this.board[nRow][nCol] !== null);
 
         if (filledNeighbours.length === 0) {
             return null;
         }
 
-        const sum = filledNeighbours.reduce(
-            (acc, [r, c]) => acc + this.board[r][c], 
-            0
-        );
+        const sum = filledNeighbours.reduce((acc, [nRow, nCol]) => acc + this.board[nRow][nCol], 0);
 
-        const lastDigit = sum % 10;
-
-        if (lastDigit === placedNumber) {
-            return [[row, col], ...filledNeighbours];
-        }
-
-        return null;
+        return sum % 10 === placedNumber ? [[row, col], ...filledNeighbours] : null;
     }
 
     placeNumber(row, col) {
-        if (this.board[row][col] !== null || this.gameStatus !== 'playing') {
+        if (this.gameStatus !== 'playing' || this.isResolvingMove || this.board[row][col] !== null) {
             return;
         }
 
+        this.isResolvingMove = true;
+
         const currentNumber = this.stream[0];
         this.board[row][col] = currentNumber;
-        this.moves++;
+        this.moves += 1;
+        this.render();
 
         const cellElement = this.getCellElement(row, col);
-        cellElement.classList.add('new-tile');
+        if (cellElement) {
+            cellElement.classList.add('new-tile');
+        }
 
         const matchedCells = this.checkMatch(row, col);
 
-        if (matchedCells) {
-            setTimeout(() => {
-                this.applyClear(matchedCells);
-                this.stream.shift();
-                this.addToStream();
-                this.render();
-                this.saveGameState();
-            }, 300);
-        } else {
+        if (!matchedCells) {
             this.stream.shift();
             this.addToStream();
+            this.isResolvingMove = false;
             this.render();
             this.checkEndCondition();
             this.saveGameState();
+            return;
         }
+
+        setTimeout(() => {
+            this.stream.shift();
+            this.addToStream();
+            this.applyClear(matchedCells, () => {
+                this.isResolvingMove = false;
+                this.render();
+            });
+        }, 300);
     }
 
-    applyClear(cells) {
+    applyClear(cells, onComplete = () => {}) {
         cells.forEach(([row, col]) => {
             const cellElement = this.getCellElement(row, col);
-            cellElement.classList.add('matched');
+            if (cellElement) {
+                cellElement.classList.add('matched');
+            }
         });
 
         setTimeout(() => {
             cells.forEach(([row, col]) => {
                 const cellElement = this.getCellElement(row, col);
-                cellElement.classList.add('removing');
+                if (cellElement) {
+                    cellElement.classList.add('removing');
+                }
             });
 
             setTimeout(() => {
@@ -244,54 +246,40 @@ class SummingGame {
                     this.board[row][col] = null;
                 });
 
-                const points = cells.length * 10;
-                this.score += points;
-
-                this.render();
+                this.score += cells.length * 10;
                 this.checkEndCondition();
                 this.saveGameState();
+                onComplete();
             }, 400);
         }, 500);
     }
 
     getCellElement(row, col) {
+        if (!this.boardElement) {
+            return null;
+        }
+
         const index = row * BOARD_SIZE + col;
-        return this.boardElement.children[index];
+        return this.boardElement.children[index] || null;
     }
 
     checkEndCondition() {
-        let filledCount = 0;
-        for (let i = 0; i < BOARD_SIZE; i++) {
-            for (let j = 0; j < BOARD_SIZE; j++) {
-                if (this.board[i][j] !== null) {
-                    filledCount++;
-                }
-            }
-        }
+        const filledCount = this.getRemainingTiles();
 
         if (filledCount === 0) {
             this.gameStatus = 'cleared';
             this.score += 500;
-            this.endGame('완승! 🎉', 'cleared');
+            this.endGame('Cleared!', 'cleared');
         } else if (filledCount === BOARD_SIZE * BOARD_SIZE) {
             this.gameStatus = 'gameover';
-            this.endGame('게임 오버', 'gameover');
+            this.endGame('Game Over', 'gameover');
         }
     }
 
     endGame(title, status) {
-        // 리더보드에 추가
-        this.leaderboard.addEntry(
-            this.score,
-            this.moves,
-            this.getRemainingTiles(),
-            status
-        );
-
-        // 게임 상태 저장
+        this.leaderboard.addEntry(this.score, this.moves, this.getRemainingTiles(), status);
         this.saveGameState();
 
-        // 리더보드 화면 표시
         setTimeout(() => {
             this.showLeaderboard(title);
         }, 1000);
@@ -302,15 +290,10 @@ class SummingGame {
         this.finalScore.textContent = this.score;
         this.finalMoves.textContent = this.moves;
         this.finalRemaining.textContent = this.getRemainingTiles();
-
-        // 리더보드 엔트리 표시
         this.renderLeaderboard();
 
-        // 화면 전환
         this.gameScreen.classList.add('hidden');
         this.leaderboardScreen.classList.remove('hidden');
-
-        // 계속하기 버튼 숨김 (게임 종료 후)
         this.continueBtn.classList.add('hidden');
     }
 
@@ -319,30 +302,27 @@ class SummingGame {
         this.leaderboardEntries.innerHTML = '';
 
         if (entries.length === 0) {
-            this.leaderboardEntries.innerHTML = '<p style="text-align: center; color: #6c757d;">아직 기록이 없습니다</p>';
+            this.leaderboardEntries.innerHTML = '<p style="text-align: center; color: #6c757d;">No records yet.</p>';
             return;
         }
 
         entries.forEach((entry, index) => {
-            const div = document.createElement('div');
-            div.className = `entry rank-${index + 1}`;
-            
+            const item = document.createElement('div');
+            item.className = `entry rank-${index + 1}`;
+
             const date = new Date(entry.date);
             const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
-            
-            const statusIcon = entry.status === 'cleared' ? '🏆' : '⏹️';
-            
-            div.innerHTML = `
+            const statusLabel = entry.status === 'cleared' ? 'WIN' : 'END';
+
+            item.innerHTML = `
                 <div class="entry-rank">${index + 1}</div>
                 <div class="entry-details">
-                    <div class="entry-score">${statusIcon} ${entry.score}점</div>
-                    <div class="entry-info">
-                        배치: ${entry.moves}회 | ${dateStr}
-                    </div>
+                    <div class="entry-score">${statusLabel} ${entry.score}</div>
+                    <div class="entry-info">Moves: ${entry.moves} | ${dateStr}</div>
                 </div>
             `;
-            
-            this.leaderboardEntries.appendChild(div);
+
+            this.leaderboardEntries.appendChild(item);
         });
     }
 
@@ -353,46 +333,48 @@ class SummingGame {
 
     getRemainingTiles() {
         let count = 0;
-        for (let i = 0; i < BOARD_SIZE; i++) {
-            for (let j = 0; j < BOARD_SIZE; j++) {
-                if (this.board[i][j] !== null) {
-                    count++;
+
+        for (let row = 0; row < BOARD_SIZE; row++) {
+            for (let col = 0; col < BOARD_SIZE; col++) {
+                if (this.board[row][col] !== null) {
+                    count += 1;
                 }
             }
         }
+
         return count;
     }
 
     render() {
-        // 보드 렌더링
         this.boardElement.innerHTML = '';
+
         const cellSize = Math.min(
             window.innerWidth / (BOARD_SIZE + 2),
             (window.innerHeight - 250) / (BOARD_SIZE + 2)
         );
-        
         const fontSize = Math.max(cellSize * 0.4, 12);
-        
-        for (let i = 0; i < BOARD_SIZE; i++) {
-            for (let j = 0; j < BOARD_SIZE; j++) {
+
+        for (let row = 0; row < BOARD_SIZE; row++) {
+            for (let col = 0; col < BOARD_SIZE; col++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
                 cell.style.fontSize = `${fontSize}px`;
-                
-                const value = this.board[i][j];
+
+                const value = this.board[row][col];
                 if (value !== null) {
                     cell.textContent = value;
                     cell.classList.add('filled');
                 } else {
                     cell.classList.add('empty');
-                    cell.addEventListener('click', () => this.placeNumber(i, j));
+                    if (!this.isResolvingMove) {
+                        cell.addEventListener('click', () => this.placeNumber(row, col));
+                    }
                 }
-                
+
                 this.boardElement.appendChild(cell);
             }
         }
 
-        // 스트림 렌더링 (5개)
         this.streamNumbersElement.innerHTML = '';
         for (let i = 0; i < STREAM_LENGTH; i++) {
             const span = document.createElement('span');
@@ -404,7 +386,6 @@ class SummingGame {
             this.streamNumbersElement.appendChild(span);
         }
 
-        // 통계 업데이트
         this.scoreElement.textContent = this.score;
         this.movesElement.textContent = this.moves;
         this.remainingElement.textContent = this.getRemainingTiles();
@@ -419,20 +400,22 @@ class SummingGame {
             gameStatus: this.gameStatus,
             savedAt: new Date().toISOString()
         };
+
         localStorage.setItem('currentGame', JSON.stringify(gameState));
     }
 
     loadGameState() {
-        const data = localStorage.getItem('currentGame');
-        return data ? JSON.parse(data) : null;
-    }
-
-    clearGameState() {
-        localStorage.removeItem('currentGame');
+        try {
+            const data = localStorage.getItem('currentGame');
+            return data ? JSON.parse(data) : null;
+        } catch (error) {
+            console.warn('Failed to load saved game. Resetting current game state.', error);
+            localStorage.removeItem('currentGame');
+            return null;
+        }
     }
 }
 
-// 게임 시작
 let game;
 if (document.getElementById('board')) {
     document.addEventListener('DOMContentLoaded', () => {
