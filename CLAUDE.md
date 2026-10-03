@@ -45,8 +45,8 @@ Summing Mobile: 9x9 숫자 배치 퍼즐 게임. 빌드 단계 없는 정적 HTM
 완료: 저장 데이터 검증, 종료 후 결과 화면 복원, 이동 즉시 저장, 이벤트 위임 + 셀 재사용 렌더, CSS(cqw) 기반 글자 크기, 리더보드 textContent 렌더, 로직 분리 + `node --test`, async 애니메이션 흐름, BOM 제거, `.gitignore`, 키보드/스크린리더 지원(`button` 셀, `aria-label`, `aria-live`), GitHub Pages 배포, 한글 UI, 최고 점수 표시, 게임 중 새 게임(진행 중이면 확인 대화상자)/기록 보기 버튼, PWA(manifest + service worker), MIT 라이선스.
 
 남은 후보:
-1. 브라우저 UI 자동 테스트(Playwright)를 CI 에 추가 (devDependency 추가가 필요하므로 사용자 확인 후 진행)
-2. 효과음 없이 가능한 피드백 강화 (예: 진동, 매치 가능 칸 힌트는 비목표라 제외)
+- 브라우저 UI 자동 테스트(Playwright)를 CI 에 추가 (devDependency 추가가 필요하므로 사용자 확인 후 진행)
+
 
 ## 작업 원칙
 
