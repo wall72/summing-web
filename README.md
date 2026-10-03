@@ -1,87 +1,75 @@
 # Summing Mobile
 
-Summing Mobile is a small browser puzzle game inspired by classic number-placement gameplay. You place the current number on a 9x9 board and clear tiles when the last digit of the neighbour sum matches the placed number.
+9x9 보드에 현재 숫자를 배치하고, 이웃한 숫자들의 합이 맞으면 타일을 지우는 브라우저 숫자 퍼즐 게임입니다. 설치나 빌드 없이 정적 HTML/CSS/바닐라 JS로 동작합니다.
 
-## Gameplay
+**플레이:** https://wall72.github.io/summing-web/
 
-- Board size: 9x9
-- Initial state: the centered 7x7 area is filled with random digits from 0 to 9
-- Stream length: 5 numbers
-- Neighbours: all 8 surrounding tiles count
-- Match rule: after placing a number, sum all filled neighbouring tiles; if `sum % 10` equals the placed number, the placed tile and those neighbours are removed
-- Score: `10 * cleared tile count`
-- Clear bonus: `+500` when the board becomes empty
-- Game over: the board reaches 81 filled tiles
+## 게임 방법
 
-## Current Features
+- 보드는 9x9이고, 시작할 때 가운데 7x7 영역에 0~9 숫자가 무작위로 채워집니다. 바깥 테두리는 비어 있습니다.
+- 화면 위쪽의 숫자 스트림(5개) 중 맨 앞 숫자가 지금 놓을 숫자입니다.
+- 빈 칸을 눌러 숫자를 놓으면 스트림이 한 칸 당겨지고 새 숫자가 하나 추가됩니다.
+- 놓은 칸 주변 8방향의 채워진 타일 숫자를 모두 더해서 `합 % 10` 이 놓은 숫자와 같으면, 놓은 타일과 그 이웃 타일이 모두 사라집니다. 채워진 이웃이 없으면 매치되지 않습니다.
+- 점수는 `지운 타일 수 x 10` 이고, 보드를 전부 비우면 `+500` 보너스를 받습니다.
+- 보드를 전부 비우면 승리(`Cleared!`), 81칸이 모두 차면 패배(`Game Over`)입니다.
+- 끝나면 결과 화면과 상위 기록(리더보드)이 표시됩니다.
 
-- Responsive single-page layout for portrait and landscape play
-- Animated tile placement, match, and removal states
-- Local leaderboard stored in `localStorage`
-- Saved in-progress game restored from `localStorage`
-- Automated logic tests (`npm test`)
-- Keyboard and screen-reader friendly board
-- Auto-deploy to GitHub Pages
-- Defensive recovery when saved JSON is corrupted
+## 주요 기능
 
-## Run Locally
+- 세로/가로 화면에 대응하는 반응형 레이아웃
+- 타일 배치, 매치, 제거 애니메이션
+- `localStorage` 에 진행 중인 게임 자동 저장 및 복원 (새로고침해도 이어하기, 종료된 게임은 결과 화면 복원)
+- 최대 20개까지 저장되는 로컬 리더보드
+- 손상된 저장 데이터는 검증 후 폐기하고 새로 시작
+- 키보드 조작과 스크린 리더 지원 (칸이 `button`, 칸별 `aria-label`, `aria-live` 상태 안내)
+- 자동 테스트와 GitHub Pages 자동 배포
 
-You can open `index.html` directly in a browser, but serving the files over a local HTTP server is recommended.
+## 로컬 실행
 
-### Python
+`index.html` 을 브라우저에서 바로 열어도 되지만, 로컬 서버로 여는 것을 권장합니다.
 
 ```bash
-python -m http.server 8000
-```
-
-### Node.js
-
-```bash
+python3 -m http.server 8000
+# 또는
 npx http-server -p 8000
 ```
 
-Then open:
+브라우저에서 `http://localhost:8000` 을 엽니다.
 
-```text
-http://localhost:8000
-```
-
-## Tests
+## 테스트
 
 ```bash
 npm test
 ```
 
-Runs `tests/logic.test.js` with Node's built-in test runner (Node 18+). It covers board and stream creation, match and non-match detection, end-state detection, saved-data validation, and leaderboard ordering.
+Node 내장 테스트 러너(Node 18 이상)로 `tests/logic.test.js` 를 실행합니다. 보드/스트림 생성, 매치·비매치 판정, 종료 상태 판정, 저장 데이터 검증, 리더보드 정렬을 검증합니다.
 
-## Play Online
+## 배포
 
-The game is deployed to GitHub Pages by `.github/workflows/pages.yml` on every push to `master`: https://wall72.github.io/summing-web/
+`master` 브랜치에 푸시하면 `.github/workflows/pages.yml` 이 테스트를 실행하고, 통과하면 GitHub Pages 에 배포합니다.
+처음 한 번은 저장소 Settings → Pages → Source 를 **GitHub Actions** 로 설정해야 합니다.
 
-## Project Structure
+## 프로젝트 구조
 
 ```text
 .
-|-- index.html
-|-- styles.css
-|-- logic.js        pure game logic (no DOM)
-|-- game.js         rendering, input, animation, storage
-|-- tests/
-|-- .github/workflows/pages.yml
+|-- index.html                    게임/결과 화면 마크업
+|-- styles.css                    스타일, 반응형, 애니메이션
+|-- logic.js                      순수 게임 로직 (DOM 미사용)
+|-- game.js                       렌더링, 입력, 애니메이션, 저장
+|-- tests/                        node --test 용 테스트
+|-- .github/workflows/pages.yml   테스트 후 Pages 배포
 |-- package.json
 |-- README.md
-`-- CLAUDE.md
+`-- CLAUDE.md                     Claude Code 작업 지침
 ```
 
-## Known Limitations
+## 제한 사항
 
-- No undo or hint system
-- No server-backed leaderboard
-- UI copy is currently in English only
+- Undo, 힌트 없음
+- 서버 기반 리더보드 없음 (기록은 브라우저별 로컬 저장)
+- UI 문구는 현재 영어
 
-## Recent Changes
+## 라이선스
 
-- split pure game logic into `logic.js` and added automated tests
-- saved games are validated before being restored; a finished game reopens on its result screen
-- moves are saved immediately, so reloading mid-animation no longer loses a move
-- board cells are real buttons (keyboard + screen reader), rendered once and updated in place
+별도 라이선스 없음.
