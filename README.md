@@ -60,6 +60,7 @@ Node 내장 테스트 러너(Node 18 이상)로 `tests/logic.test.js` 를 실행
 |-- tests/                        node --test 용 테스트
 |-- .github/workflows/pages.yml   테스트 후 Pages 배포
 |-- package.json
+|-- LICENSE                       MIT 라이선스
 |-- README.md
 `-- CLAUDE.md                     Claude Code 작업 지침
 ```
@@ -72,4 +73,4 @@ Node 내장 테스트 러너(Node 18 이상)로 `tests/logic.test.js` 를 실행
 
 ## 라이선스
 
-별도 라이선스 없음.
+[MIT License](LICENSE)
