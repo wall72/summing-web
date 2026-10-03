@@ -25,7 +25,7 @@
 - 최고 점수 표시, 게임 중 새 게임(확인 대화상자)과 기록 보기
 - 한국어 UI
 - PWA: 홈 화면에 설치하고 오프라인에서도 실행
-- 자동 테스트와 GitHub Pages 자동 배포
+- 단위 테스트 + Playwright E2E 테스트, GitHub Pages 자동 배포
 
 ## 로컬 실행
 
@@ -42,14 +42,18 @@ npx http-server -p 8000
 ## 테스트
 
 ```bash
-npm test
+npm test                 # 단위 테스트 (Node 내장 러너, Node 18 이상)
+npm ci                   # E2E 준비: 의존성 설치
+npx playwright install chromium
+npm run test:e2e         # Playwright E2E (모바일/데스크톱)
 ```
 
-Node 내장 테스트 러너(Node 18 이상)로 `tests/logic.test.js` 를 실행합니다. 보드/스트림 생성, 매치·비매치 판정, 종료 상태 판정, 저장 데이터 검증, 리더보드 정렬을 검증합니다.
+- 단위 테스트(`tests/logic.test.js`): 보드/스트림 생성, 매치·비매치 판정, 종료 상태 판정, 저장 데이터 검증, 리더보드 정렬
+- E2E 테스트(`e2e/game.spec.js`): 새 게임 시작, 배치와 새로고침 후 복원, 매치 시 점수, 클리어 결과 화면과 기록, 손상된 저장 데이터 복구, 새 게임 확인 대화상자, 키보드 조작
 
 ## 배포
 
-`master` 브랜치에 푸시하면 `.github/workflows/pages.yml` 이 테스트를 실행하고, 통과하면 GitHub Pages 에 배포합니다.
+`master` 브랜치에 푸시하면 `.github/workflows/pages.yml` 이 단위·E2E 테스트를 실행하고, 모두 통과하면 GitHub Pages 에 배포합니다.
 처음 한 번은 저장소 Settings → Pages → Source 를 **GitHub Actions** 로 설정해야 합니다.
 
 ## 프로젝트 구조
@@ -61,7 +65,8 @@ Node 내장 테스트 러너(Node 18 이상)로 `tests/logic.test.js` 를 실행
 |-- sw.js, manifest.webmanifest, icon.svg   PWA
 |-- logic.js                      순수 게임 로직 (DOM 미사용)
 |-- game.js                       렌더링, 입력, 애니메이션, 저장
-|-- tests/                        node --test 용 테스트
+|-- tests/                        node --test 용 단위 테스트
+|-- e2e/, playwright.config.js    Playwright E2E 테스트
 |-- .github/workflows/pages.yml   테스트 후 Pages 배포
 |-- package.json
 |-- LICENSE                       MIT 라이선스
@@ -73,7 +78,6 @@ Node 내장 테스트 러너(Node 18 이상)로 `tests/logic.test.js` 를 실행
 
 - Undo, 힌트 없음
 - 서버 기반 리더보드 없음 (기록은 브라우저별 로컬 저장)
-- 브라우저 UI 자동 테스트는 아직 없음 (로직 테스트만 존재)
 
 ## 라이선스
 

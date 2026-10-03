@@ -5,9 +5,10 @@ Summing Mobile: 9x9 숫자 배치 퍼즐 게임. 빌드 단계 없는 정적 HTM
 ## 실행 / 테스트
 
 - 실행: `python -m http.server 8000` 후 `http://localhost:8000` (index.html 직접 열기도 가능)
-- 테스트: `npm test` (Node 내장 러너, 외부 의존성 없음). `tests/logic.test.js` 가 `logic.js` 를 검증
-- 배포: master 푸시 시 `.github/workflows/pages.yml` 이 테스트 후 GitHub Pages 에 배포 (Pages 소스는 "GitHub Actions")
-- 빌드/번들러 없음. 의존성 추가 시 사용자 확인 먼저.
+- 단위 테스트: `npm test` (Node 내장 러너). `tests/logic.test.js` 가 `logic.js` 를 검증
+- E2E 테스트: `npm run test:e2e` (Playwright, 모바일/데스크톱 2개 프로젝트, `e2e/game.spec.js`). 정적 서버(포트 4173)는 자동 실행. 브라우저 설치는 `npx playwright install chromium`, 이미 설치된 Chromium 을 쓰려면 `PW_CHROMIUM_PATH=/경로/chromium`
+- 배포: master 푸시 시 `.github/workflows/pages.yml` 이 단위·E2E 테스트 통과 후 GitHub Pages 에 배포 (Pages 소스는 "GitHub Actions")
+- 빌드/번들러 없음. 런타임 의존성 없음 (devDependency 는 `@playwright/test` 뿐). 의존성 추가 시 사용자 확인 먼저.
 
 ## 파일 구조
 
@@ -16,7 +17,8 @@ Summing Mobile: 9x9 숫자 배치 퍼즐 게임. 빌드 단계 없는 정적 HTM
 - `game.js` - `LeaderboardManager` + `SummingGame`(DOM 렌더링, 입력, 애니메이션, 저장). 규칙 로직은 `logic.js` 에 추가
 - `sw.js`, `manifest.webmanifest`, `icon.svg` - PWA. 캐시 대상 파일을 바꾸면 `sw.js` 의 `SHELL` 과 `CACHE` 버전, `pages.yml` 의 복사 목록을 함께 수정
 - `styles.css` - 반응형(세로/가로) 스타일, 타일 애니메이션
-- `tests/` - `node --test` 용 테스트
+- `tests/` - `node --test` 용 단위 테스트
+- `e2e/`, `playwright.config.js` - Playwright E2E 테스트
 
 ## 게임 규칙 (변경 시 `logic.js` 와 `tests/` 도 함께 수정)
 
@@ -42,13 +44,11 @@ Summing Mobile: 9x9 숫자 배치 퍼즐 게임. 빌드 단계 없는 정적 HTM
 
 ## 개선 과제
 
-완료: 저장 데이터 검증, 종료 후 결과 화면 복원, 이동 즉시 저장, 이벤트 위임 + 셀 재사용 렌더, CSS(cqw) 기반 글자 크기, 리더보드 textContent 렌더, 로직 분리 + `node --test`, async 애니메이션 흐름, BOM 제거, `.gitignore`, 키보드/스크린리더 지원(`button` 셀, `aria-label`, `aria-live`), GitHub Pages 배포, 한글 UI, 최고 점수 표시, 게임 중 새 게임(진행 중이면 확인 대화상자)/기록 보기 버튼, PWA(manifest + service worker), MIT 라이선스.
+완료: 저장 데이터 검증, 종료 후 결과 화면 복원, 이동 즉시 저장, 이벤트 위임 + 셀 재사용 렌더, CSS(cqw) 기반 글자 크기, 리더보드 textContent 렌더, 로직 분리 + `node --test`, async 애니메이션 흐름, BOM 제거, `.gitignore`, 키보드/스크린리더 지원(`button` 셀, `aria-label`, `aria-live`), GitHub Pages 배포, 한글 UI, 최고 점수 표시, 게임 중 새 게임(진행 중이면 확인 대화상자)/기록 보기 버튼, PWA(manifest + service worker), MIT 라이선스, Playwright E2E 테스트와 CI.
 
-남은 후보:
-- 브라우저 UI 자동 테스트(Playwright)를 CI 에 추가 (devDependency 추가가 필요하므로 사용자 확인 후 진행)
-
+남은 후보: 없음 (새 아이디어는 비목표 목록을 먼저 확인).
 
 ## 작업 원칙
 
 - 규칙을 바꾸면 이 파일, README.md, `tests/` 를 함께 갱신
-- 변경 후 `npm test` 실행
+- 변경 후 `npm test` 와 `npm run test:e2e` 실행 (UI/흐름을 바꾸면 `e2e/` 도 갱신)
