@@ -22,6 +22,9 @@
 - 최대 20개까지 저장되는 로컬 리더보드
 - 손상된 저장 데이터는 검증 후 폐기하고 새로 시작
 - 키보드 조작과 스크린 리더 지원 (칸이 `button`, 칸별 `aria-label`, `aria-live` 상태 안내)
+- 최고 점수 표시, 게임 중 새 게임(확인 대화상자)과 기록 보기
+- 한국어 UI
+- PWA: 홈 화면에 설치하고 오프라인에서도 실행
 - 자동 테스트와 GitHub Pages 자동 배포
 
 ## 로컬 실행
@@ -55,6 +58,7 @@ Node 내장 테스트 러너(Node 18 이상)로 `tests/logic.test.js` 를 실행
 .
 |-- index.html                    게임/결과 화면 마크업
 |-- styles.css                    스타일, 반응형, 애니메이션
+|-- sw.js, manifest.webmanifest, icon.svg   PWA
 |-- logic.js                      순수 게임 로직 (DOM 미사용)
 |-- game.js                       렌더링, 입력, 애니메이션, 저장
 |-- tests/                        node --test 용 테스트
@@ -69,7 +73,7 @@ Node 내장 테스트 러너(Node 18 이상)로 `tests/logic.test.js` 를 실행
 
 - Undo, 힌트 없음
 - 서버 기반 리더보드 없음 (기록은 브라우저별 로컬 저장)
-- UI 문구는 현재 영어
+- 브라우저 UI 자동 테스트는 아직 없음 (로직 테스트만 존재)
 
 ## 라이선스
 

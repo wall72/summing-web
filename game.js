@@ -10,6 +10,17 @@ const MATCH_DELAY_MS = 500;
 const REMOVE_DELAY_MS = 400;
 const RESULT_DELAY_MS = 1000;
 
+const TEXT = {
+    cleared: '클리어!',
+    gameOver: '게임 오버',
+    inProgress: '진행 중',
+    noRecords: '기록이 없습니다.',
+    win: '승리',
+    end: '종료',
+    moves: '이동',
+    confirmNewGame: '진행 중인 게임을 버리고 새 게임을 시작할까요?'
+};
+
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 function readStorage(key) {
@@ -91,8 +102,17 @@ class SummingGame {
         this.finalRemaining = document.getElementById('finalRemaining');
         this.leaderboardEntries = document.getElementById('leaderboardEntries');
 
+        this.bestElement = document.getElementById('best');
+
         this.newGameBtn = document.getElementById('newGameBtn');
+        this.continueBtn = document.getElementById('continueBtn');
+        this.restartBtn = document.getElementById('restartBtn');
+        this.recordsBtn = document.getElementById('recordsBtn');
+
         this.newGameBtn.addEventListener('click', () => this.startNewGame());
+        this.continueBtn.addEventListener('click', () => this.showGameScreen());
+        this.restartBtn.addEventListener('click', () => this.confirmNewGame());
+        this.recordsBtn.addEventListener('click', () => this.showResult());
     }
 
     // Build the 81 cells once; render() only updates them. One delegated listener handles input.
@@ -150,6 +170,14 @@ class SummingGame {
         this.showGameScreen();
         this.render();
         this.saveGameState();
+    }
+
+    confirmNewGame() {
+        const inProgress = this.gameStatus === 'playing' && this.moves > 0;
+        if (this.isResolvingMove || (inProgress && !window.confirm(TEXT.confirmNewGame))) {
+            return;
+        }
+        this.startNewGame();
     }
 
     // Applies the whole move to the game state immediately (so it is saved right away),
@@ -210,8 +238,8 @@ class SummingGame {
     }
 
     showResult() {
-        const title = this.gameStatus === 'cleared' ? 'Cleared!' : 'Game Over';
-        this.resultTitle.textContent = title;
+        const titles = { cleared: TEXT.cleared, gameover: TEXT.gameOver, playing: TEXT.inProgress };
+        this.resultTitle.textContent = titles[this.gameStatus];
         this.finalScore.textContent = this.score;
         this.finalMoves.textContent = this.moves;
         this.finalRemaining.textContent = countFilled(this.board);
@@ -219,7 +247,9 @@ class SummingGame {
 
         this.gameScreen.classList.add('hidden');
         this.leaderboardScreen.classList.remove('hidden');
-        this.newGameBtn.focus();
+        // During a game the records screen can be closed; after the game ends only a new game is offered.
+        this.continueBtn.classList.toggle('hidden', this.gameStatus !== 'playing');
+        (this.gameStatus === 'playing' ? this.continueBtn : this.newGameBtn).focus();
     }
 
     renderLeaderboard() {
@@ -229,7 +259,7 @@ class SummingGame {
         if (entries.length === 0) {
             const empty = document.createElement('p');
             empty.className = 'entries-empty';
-            empty.textContent = 'No records yet.';
+            empty.textContent = TEXT.noRecords;
             this.leaderboardEntries.appendChild(empty);
             return;
         }
@@ -237,7 +267,7 @@ class SummingGame {
         entries.forEach((entry, index) => {
             const date = new Date(entry.date);
             const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
-            const statusLabel = entry.status === 'cleared' ? 'WIN' : 'END';
+            const statusLabel = entry.status === 'cleared' ? TEXT.win : TEXT.end;
 
             const item = document.createElement('div');
             item.className = `entry rank-${index + 1}`;
@@ -255,7 +285,7 @@ class SummingGame {
 
             const info = document.createElement('div');
             info.className = 'entry-info';
-            info.textContent = `Moves: ${entry.moves} | ${dateStr}`;
+            info.textContent = `${TEXT.moves} ${entry.moves} | ${dateStr}`;
 
             details.append(score, info);
             item.append(rank, details);
@@ -283,7 +313,7 @@ class SummingGame {
             cell.tabIndex = filled ? -1 : 0;
             cell.setAttribute('aria-disabled', String(filled || locked));
             cell.setAttribute('aria-label',
-                `Row ${row + 1}, column ${col + 1}, ${filled ? `tile ${value}` : 'empty'}`);
+                `${row + 1}행 ${col + 1}열, ${filled ? `숫자 ${value}` : '빈 칸'}`);
         });
 
         this.streamNumbersElement.replaceChildren(
@@ -298,11 +328,13 @@ class SummingGame {
         this.scoreElement.textContent = this.score;
         this.movesElement.textContent = this.moves;
         this.remainingElement.textContent = countFilled(this.board);
+        const [topEntry] = this.leaderboard.getTopEntries(1);
+        this.bestElement.textContent = Math.max(this.score, topEntry ? topEntry.score : 0);
 
         if (this.statusElement) {
             this.statusElement.textContent =
-                `Score ${this.score}. Moves ${this.moves}. ${countFilled(this.board)} tiles left. ` +
-                `Place ${this.stream[0]}.`;
+                `점수 ${this.score}, 이동 ${this.moves}, 남은 타일 ${countFilled(this.board)}개. ` +
+                `${this.stream[0]}을(를) 놓으세요.`;
         }
     }
 
@@ -322,5 +354,11 @@ let game;
 if (document.getElementById('board')) {
     document.addEventListener('DOMContentLoaded', () => {
         game = new SummingGame();
+    });
+}
+
+if ('serviceWorker' in navigator && /^https:|^http:\/\/localhost/.test(location.href)) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(error => console.warn('Service worker failed.', error));
     });
 }

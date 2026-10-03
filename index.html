@@ -1,12 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#FF6B9D">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icon.svg">
     <title>Summing Mobile</title>
-    <link rel="icon" href="data:,">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -16,16 +19,20 @@
                 <h1>Summing Mobile</h1>
                 <div class="stats">
                     <div class="stat-item">
-                        <span class="stat-label">Score</span>
+                        <span class="stat-label">점수</span>
                         <span id="score" class="stat-value">0</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">Moves</span>
+                        <span class="stat-label">이동</span>
                         <span id="moves" class="stat-value">0</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">Tiles</span>
+                        <span class="stat-label">타일</span>
                         <span id="remaining" class="stat-value">49</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">최고</span>
+                        <span id="best" class="stat-value">0</span>
                     </div>
                 </div>
             </header>
@@ -34,7 +41,7 @@
 
             <div class="game-content">
                 <div class="stream-horizontal">
-                    <div class="stream-label">Next Numbers</div>
+                    <div class="stream-label">다음 숫자</div>
                     <div class="stream-numbers" id="streamNumbers">
                         <span class="stream-num current">5</span>
                         <span class="stream-num">3</span>
@@ -47,6 +54,11 @@
                 <div class="board-wrapper">
                     <div id="board" class="board"></div>
                 </div>
+
+                <div class="game-actions">
+                    <button id="restartBtn" type="button" class="btn-small">새 게임</button>
+                    <button id="recordsBtn" type="button" class="btn-small">기록 보기</button>
+                </div>
             </div>
         </div>
     </div>
@@ -54,34 +66,35 @@
     <div id="leaderboardScreen" class="screen hidden">
         <div class="leaderboard-container">
             <header class="leaderboard-header">
-                <h1>Leaderboard</h1>
+                <h1>리더보드</h1>
             </header>
 
             <div class="game-result" id="gameResult">
-                <h2 id="resultTitle">Game Finished</h2>
+                <h2 id="resultTitle">게임 종료</h2>
                 <div class="result-stats">
                     <div class="result-item">
-                        <span class="result-label">Final Score</span>
+                        <span class="result-label">최종 점수</span>
                         <span id="finalScore" class="result-value">0</span>
                     </div>
                     <div class="result-item">
-                        <span class="result-label">Moves</span>
+                        <span class="result-label">이동 수</span>
                         <span id="finalMoves" class="result-value">0</span>
                     </div>
                     <div class="result-item">
-                        <span class="result-label">Remaining Tiles</span>
+                        <span class="result-label">남은 타일</span>
                         <span id="finalRemaining" class="result-value">0</span>
                     </div>
                 </div>
             </div>
 
             <div class="leaderboard-list">
-                <h3>Top Records</h3>
+                <h3>상위 기록</h3>
                 <div id="leaderboardEntries" class="entries"></div>
             </div>
 
             <div class="leaderboard-actions">
-                <button id="newGameBtn" class="btn btn-primary">New Game</button>
+                <button id="newGameBtn" class="btn btn-primary">새 게임</button>
+                <button id="continueBtn" class="btn btn-secondary hidden">계속하기</button>
             </div>
         </div>
     </div>

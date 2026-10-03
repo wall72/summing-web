@@ -14,6 +14,7 @@ Summing Mobile: 9x9 숫자 배치 퍼즐 게임. 빌드 단계 없는 정적 HTM
 - `index.html` - 게임 화면(`#gameScreen`)과 결과/리더보드 화면(`#leaderboardScreen`)
 - `logic.js` - 순수 게임 로직(보드/스트림 생성, 매치, 종료 판정, 저장 데이터 검증, 리더보드 정렬). DOM/localStorage 사용 금지. 브라우저 전역 `SummingLogic` 및 Node `require` 둘 다 지원
 - `game.js` - `LeaderboardManager` + `SummingGame`(DOM 렌더링, 입력, 애니메이션, 저장). 규칙 로직은 `logic.js` 에 추가
+- `sw.js`, `manifest.webmanifest`, `icon.svg` - PWA. 캐시 대상 파일을 바꾸면 `sw.js` 의 `SHELL` 과 `CACHE` 버전, `pages.yml` 의 복사 목록을 함께 수정
 - `styles.css` - 반응형(세로/가로) 스타일, 타일 애니메이션
 - `tests/` - `node --test` 용 테스트
 
@@ -35,19 +36,17 @@ Summing Mobile: 9x9 숫자 배치 퍼즐 게임. 빌드 단계 없는 정적 HTM
 
 - 4칸 들여쓰기, 작은따옴표, 세미콜론 사용 (기존 스타일 유지)
 - 프레임워크/번들러 도입 금지 (비목표). 바닐라 JS 유지
-- UI 문구는 현재 영어. 한글화 시 UTF-8(BOM 없음)로 저장
+- UI 문구는 한국어. `index.html` 의 정적 문구와 `game.js` 의 `TEXT`/`aria-label` 에 있음. 파일은 UTF-8(BOM 없음)
 - 비목표: 계정, 온라인 리더보드, 멀티플레이, 오디오, undo/힌트
 - `game.js` 의 애니메이션 상수는 `styles.css` 의 duration 과 맞출 것
 
 ## 개선 과제
 
-완료: 저장 데이터 검증, 종료 후 결과 화면 복원, 이동 즉시 저장, 이벤트 위임 + 셀 재사용 렌더, CSS(cqw) 기반 글자 크기, 리더보드 textContent 렌더, 로직 분리 + `node --test`, async 애니메이션 흐름, BOM 제거, `.gitignore`, 키보드/스크린리더 지원(`button` 셀, `aria-label`, `aria-live`), GitHub Pages 배포.
+완료: 저장 데이터 검증, 종료 후 결과 화면 복원, 이동 즉시 저장, 이벤트 위임 + 셀 재사용 렌더, CSS(cqw) 기반 글자 크기, 리더보드 textContent 렌더, 로직 분리 + `node --test`, async 애니메이션 흐름, BOM 제거, `.gitignore`, 키보드/스크린리더 지원(`button` 셀, `aria-label`, `aria-live`), GitHub Pages 배포, 한글 UI, 최고 점수 표시, 게임 중 새 게임(진행 중이면 확인 대화상자)/기록 보기 버튼, PWA(manifest + service worker), MIT 라이선스.
 
 남은 후보:
-1. 한글 UI 복원 (UTF-8, BOM 없음) 및 문구 분리
-2. 최고 점수 표시, 게임 중 새 게임/리더보드 버튼과 확인 대화상자
-3. PWA (manifest + service worker)로 홈 화면 설치
-4. 브라우저 UI 자동 테스트(Playwright) CI 추가
+1. 브라우저 UI 자동 테스트(Playwright)를 CI 에 추가 (devDependency 추가가 필요하므로 사용자 확인 후 진행)
+2. 효과음 없이 가능한 피드백 강화 (예: 진동, 매치 가능 칸 힌트는 비목표라 제외)
 
 ## 작업 원칙
 

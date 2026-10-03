@@ -1,0 +1,14 @@
+{
+  "name": "Summing Mobile",
+  "short_name": "Summing",
+  "description": "이웃한 숫자의 합으로 타일을 지우는 숫자 퍼즐",
+  "lang": "ko",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#FFE5B4",
+  "theme_color": "#FF6B9D",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
