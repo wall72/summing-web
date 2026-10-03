@@ -70,7 +70,7 @@ The current test page checks:
 |-- game.js
 |-- test.html
 |-- README.md
-`-- PRD.md
+`-- CLAUDE.md
 ```
 
 ## Known Limitations
