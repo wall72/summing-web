@@ -1,25 +1,44 @@
-﻿const BOARD_SIZE = 9;
-const INITIAL_GRID_SIZE = 7;
-const STREAM_LENGTH = 5;
+const {
+    BOARD_SIZE, STREAM_LENGTH, POINTS_PER_TILE, CLEAR_BONUS,
+    createBoard, createStream, randomDigit, findMatch, countFilled, getStatus,
+    isValidSavedGame, isValidLeaderboardEntry, addLeaderboardEntry
+} = SummingLogic;
+
+// Keep in sync with the CSS animation durations in styles.css.
+const PLACE_DELAY_MS = 300;
+const MATCH_DELAY_MS = 500;
+const REMOVE_DELAY_MS = 400;
+const RESULT_DELAY_MS = 1000;
+
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function readStorage(key) {
+    try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : null;
+    } catch (error) {
+        console.warn(`Failed to read "${key}". Resetting saved data.`, error);
+        try {
+            localStorage.removeItem(key);
+        } catch (removeError) {
+            // storage unavailable
+        }
+        return null;
+    }
+}
+
+function writeStorage(key, value) {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+        console.warn(`Failed to save "${key}".`, error);
+    }
+}
 
 class LeaderboardManager {
     constructor() {
-        this.entries = this.load();
-    }
-
-    load() {
-        try {
-            const data = localStorage.getItem('leaderboard');
-            return data ? JSON.parse(data) : [];
-        } catch (error) {
-            console.warn('Failed to load leaderboard data. Resetting saved leaderboard.', error);
-            localStorage.removeItem('leaderboard');
-            return [];
-        }
-    }
-
-    save() {
-        localStorage.setItem('leaderboard', JSON.stringify(this.entries));
+        const saved = readStorage('leaderboard');
+        this.entries = Array.isArray(saved) ? saved.filter(isValidLeaderboardEntry) : [];
     }
 
     addEntry(score, moves, remaining, status) {
@@ -31,22 +50,8 @@ class LeaderboardManager {
             date: new Date().toISOString(),
             timestamp: Date.now()
         };
-
-        this.entries.push(entry);
-        this.entries.sort((a, b) => {
-            if (b.score !== a.score) {
-                return b.score - a.score;
-            }
-
-            if (a.moves !== b.moves) {
-                return a.moves - b.moves;
-            }
-
-            return b.timestamp - a.timestamp;
-        });
-
-        this.entries = this.entries.slice(0, 20);
-        this.save();
+        this.entries = addLeaderboardEntry(this.entries, entry);
+        writeStorage('leaderboard', this.entries);
     }
 
     getTopEntries(count = 10) {
@@ -65,6 +70,7 @@ class SummingGame {
         this.leaderboard = new LeaderboardManager();
 
         this.initElements();
+        this.buildBoard();
         this.loadOrStartGame();
     }
 
@@ -77,6 +83,7 @@ class SummingGame {
         this.movesElement = document.getElementById('moves');
         this.remainingElement = document.getElementById('remaining');
         this.streamNumbersElement = document.getElementById('streamNumbers');
+        this.statusElement = document.getElementById('status');
 
         this.resultTitle = document.getElementById('resultTitle');
         this.finalScore = document.getElementById('finalScore');
@@ -85,29 +92,48 @@ class SummingGame {
         this.leaderboardEntries = document.getElementById('leaderboardEntries');
 
         this.newGameBtn = document.getElementById('newGameBtn');
-        this.continueBtn = document.getElementById('continueBtn');
+        this.newGameBtn.addEventListener('click', () => this.startNewGame());
+    }
 
-        if (this.newGameBtn) {
-            this.newGameBtn.addEventListener('click', () => this.startNewGame());
+    // Build the 81 cells once; render() only updates them. One delegated listener handles input.
+    buildBoard() {
+        this.cells = [];
+        for (let row = 0; row < BOARD_SIZE; row++) {
+            for (let col = 0; col < BOARD_SIZE; col++) {
+                const cell = document.createElement('button');
+                cell.type = 'button';
+                cell.className = 'cell';
+                cell.dataset.row = row;
+                cell.dataset.col = col;
+                this.boardElement.appendChild(cell);
+                this.cells.push(cell);
+            }
         }
 
-        if (this.continueBtn) {
-            this.continueBtn.addEventListener('click', () => this.continueGame());
-        }
+        this.boardElement.addEventListener('click', event => {
+            const cell = event.target.closest('.cell');
+            if (cell) {
+                this.placeNumber(Number(cell.dataset.row), Number(cell.dataset.col));
+            }
+        });
     }
 
     loadOrStartGame() {
-        const savedGame = this.loadGameState();
+        const saved = readStorage('currentGame');
 
-        if (savedGame && savedGame.gameStatus === 'playing') {
-            this.board = savedGame.board;
-            this.stream = savedGame.stream;
-            this.score = savedGame.score;
-            this.moves = savedGame.moves;
-            this.gameStatus = savedGame.gameStatus;
-            this.isResolvingMove = false;
-            this.showGameScreen();
+        if (isValidSavedGame(saved)) {
+            this.board = saved.board;
+            this.stream = saved.stream;
+            this.score = saved.score;
+            this.moves = saved.moves;
+            this.gameStatus = saved.gameStatus;
             this.render();
+
+            if (this.gameStatus === 'playing') {
+                this.showGameScreen();
+            } else {
+                this.showResult();
+            }
             return;
         }
 
@@ -115,213 +141,124 @@ class SummingGame {
     }
 
     startNewGame() {
+        this.board = createBoard();
+        this.stream = createStream();
         this.score = 0;
         this.moves = 0;
         this.gameStatus = 'playing';
         this.isResolvingMove = false;
-        this.initBoard();
-        this.generateStream();
         this.showGameScreen();
         this.render();
         this.saveGameState();
     }
 
-    continueGame() {
-        this.showGameScreen();
-    }
-
-    initBoard() {
-        this.board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
-
-        const startIdx = (BOARD_SIZE - INITIAL_GRID_SIZE) / 2;
-        for (let row = startIdx; row < startIdx + INITIAL_GRID_SIZE; row++) {
-            for (let col = startIdx; col < startIdx + INITIAL_GRID_SIZE; col++) {
-                this.board[row][col] = Math.floor(Math.random() * 10);
-            }
-        }
-    }
-
-    generateStream() {
-        this.stream = [];
-        for (let i = 0; i < STREAM_LENGTH; i++) {
-            this.stream.push(Math.floor(Math.random() * 10));
-        }
-    }
-
-    addToStream() {
-        this.stream.push(Math.floor(Math.random() * 10));
-    }
-
-    getNeighbours(row, col) {
-        const neighbours = [];
-        const directions = [
-            [-1, -1], [-1, 0], [-1, 1],
-            [0, -1],           [0, 1],
-            [1, -1],  [1, 0],  [1, 1]
-        ];
-
-        for (const [dRow, dCol] of directions) {
-            const nextRow = row + dRow;
-            const nextCol = col + dCol;
-
-            if (nextRow >= 0 && nextRow < BOARD_SIZE && nextCol >= 0 && nextCol < BOARD_SIZE) {
-                neighbours.push([nextRow, nextCol]);
-            }
-        }
-
-        return neighbours;
-    }
-
-    checkMatch(row, col) {
-        const placedNumber = this.board[row][col];
-        const neighbours = this.getNeighbours(row, col);
-        const filledNeighbours = neighbours.filter(([nRow, nCol]) => this.board[nRow][nCol] !== null);
-
-        if (filledNeighbours.length === 0) {
-            return null;
-        }
-
-        const sum = filledNeighbours.reduce((acc, [nRow, nCol]) => acc + this.board[nRow][nCol], 0);
-
-        return sum % 10 === placedNumber ? [[row, col], ...filledNeighbours] : null;
-    }
-
-    placeNumber(row, col) {
+    // Applies the whole move to the game state immediately (so it is saved right away),
+    // then plays the animation from a snapshot of the board before the clear.
+    async placeNumber(row, col) {
         if (this.gameStatus !== 'playing' || this.isResolvingMove || this.board[row][col] !== null) {
             return;
         }
 
         this.isResolvingMove = true;
 
-        const currentNumber = this.stream[0];
-        this.board[row][col] = currentNumber;
+        this.board[row][col] = this.stream[0];
+        const matchedCells = findMatch(this.board, row, col);
+        const boardBeforeClear = this.board.map(line => [...line]);
+
         this.moves += 1;
+        this.stream.shift();
+        this.stream.push(randomDigit());
+
+        if (matchedCells) {
+            matchedCells.forEach(([r, c]) => {
+                this.board[r][c] = null;
+            });
+            this.score += matchedCells.length * POINTS_PER_TILE;
+        }
+
+        this.gameStatus = getStatus(this.board);
+        if (this.gameStatus === 'cleared') {
+            this.score += CLEAR_BONUS;
+        }
+        if (this.gameStatus !== 'playing') {
+            this.leaderboard.addEntry(this.score, this.moves, countFilled(this.board), this.gameStatus);
+        }
+        this.saveGameState();
+
+        this.render(boardBeforeClear);
+        this.getCellElement(row, col).classList.add('new-tile');
+
+        if (matchedCells) {
+            await delay(PLACE_DELAY_MS);
+            matchedCells.forEach(([r, c]) => this.getCellElement(r, c).classList.add('matched'));
+            await delay(MATCH_DELAY_MS);
+            matchedCells.forEach(([r, c]) => this.getCellElement(r, c).classList.add('removing'));
+            await delay(REMOVE_DELAY_MS);
+        }
+
+        this.isResolvingMove = false;
         this.render();
 
-        const cellElement = this.getCellElement(row, col);
-        if (cellElement) {
-            cellElement.classList.add('new-tile');
+        if (this.gameStatus !== 'playing') {
+            await delay(RESULT_DELAY_MS);
+            this.showResult();
         }
-
-        const matchedCells = this.checkMatch(row, col);
-
-        if (!matchedCells) {
-            this.stream.shift();
-            this.addToStream();
-            this.isResolvingMove = false;
-            this.render();
-            this.checkEndCondition();
-            this.saveGameState();
-            return;
-        }
-
-        setTimeout(() => {
-            this.stream.shift();
-            this.addToStream();
-            this.applyClear(matchedCells, () => {
-                this.isResolvingMove = false;
-                this.render();
-            });
-        }, 300);
-    }
-
-    applyClear(cells, onComplete = () => {}) {
-        cells.forEach(([row, col]) => {
-            const cellElement = this.getCellElement(row, col);
-            if (cellElement) {
-                cellElement.classList.add('matched');
-            }
-        });
-
-        setTimeout(() => {
-            cells.forEach(([row, col]) => {
-                const cellElement = this.getCellElement(row, col);
-                if (cellElement) {
-                    cellElement.classList.add('removing');
-                }
-            });
-
-            setTimeout(() => {
-                cells.forEach(([row, col]) => {
-                    this.board[row][col] = null;
-                });
-
-                this.score += cells.length * 10;
-                this.checkEndCondition();
-                this.saveGameState();
-                onComplete();
-            }, 400);
-        }, 500);
     }
 
     getCellElement(row, col) {
-        if (!this.boardElement) {
-            return null;
-        }
-
-        const index = row * BOARD_SIZE + col;
-        return this.boardElement.children[index] || null;
+        return this.cells[row * BOARD_SIZE + col];
     }
 
-    checkEndCondition() {
-        const filledCount = this.getRemainingTiles();
-
-        if (filledCount === 0) {
-            this.gameStatus = 'cleared';
-            this.score += 500;
-            this.endGame('Cleared!', 'cleared');
-        } else if (filledCount === BOARD_SIZE * BOARD_SIZE) {
-            this.gameStatus = 'gameover';
-            this.endGame('Game Over', 'gameover');
-        }
-    }
-
-    endGame(title, status) {
-        this.leaderboard.addEntry(this.score, this.moves, this.getRemainingTiles(), status);
-        this.saveGameState();
-
-        setTimeout(() => {
-            this.showLeaderboard(title);
-        }, 1000);
-    }
-
-    showLeaderboard(title) {
+    showResult() {
+        const title = this.gameStatus === 'cleared' ? 'Cleared!' : 'Game Over';
         this.resultTitle.textContent = title;
         this.finalScore.textContent = this.score;
         this.finalMoves.textContent = this.moves;
-        this.finalRemaining.textContent = this.getRemainingTiles();
+        this.finalRemaining.textContent = countFilled(this.board);
         this.renderLeaderboard();
 
         this.gameScreen.classList.add('hidden');
         this.leaderboardScreen.classList.remove('hidden');
-        this.continueBtn.classList.add('hidden');
+        this.newGameBtn.focus();
     }
 
     renderLeaderboard() {
         const entries = this.leaderboard.getTopEntries(10);
-        this.leaderboardEntries.innerHTML = '';
+        this.leaderboardEntries.replaceChildren();
 
         if (entries.length === 0) {
-            this.leaderboardEntries.innerHTML = '<p style="text-align: center; color: #6c757d;">No records yet.</p>';
+            const empty = document.createElement('p');
+            empty.className = 'entries-empty';
+            empty.textContent = 'No records yet.';
+            this.leaderboardEntries.appendChild(empty);
             return;
         }
 
         entries.forEach((entry, index) => {
-            const item = document.createElement('div');
-            item.className = `entry rank-${index + 1}`;
-
             const date = new Date(entry.date);
             const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
             const statusLabel = entry.status === 'cleared' ? 'WIN' : 'END';
 
-            item.innerHTML = `
-                <div class="entry-rank">${index + 1}</div>
-                <div class="entry-details">
-                    <div class="entry-score">${statusLabel} ${entry.score}</div>
-                    <div class="entry-info">Moves: ${entry.moves} | ${dateStr}</div>
-                </div>
-            `;
+            const item = document.createElement('div');
+            item.className = `entry rank-${index + 1}`;
 
+            const rank = document.createElement('div');
+            rank.className = 'entry-rank';
+            rank.textContent = index + 1;
+
+            const details = document.createElement('div');
+            details.className = 'entry-details';
+
+            const score = document.createElement('div');
+            score.className = 'entry-score';
+            score.textContent = `${statusLabel} ${entry.score}`;
+
+            const info = document.createElement('div');
+            info.className = 'entry-info';
+            info.textContent = `Moves: ${entry.moves} | ${dateStr}`;
+
+            details.append(score, info);
+            item.append(rank, details);
             this.leaderboardEntries.appendChild(item);
         });
     }
@@ -331,88 +268,53 @@ class SummingGame {
         this.leaderboardScreen.classList.add('hidden');
     }
 
-    getRemainingTiles() {
-        let count = 0;
+    // `displayBoard` lets a move animation show the board before tiles are cleared.
+    render(displayBoard = this.board) {
+        const locked = this.isResolvingMove || this.gameStatus !== 'playing';
 
-        for (let row = 0; row < BOARD_SIZE; row++) {
-            for (let col = 0; col < BOARD_SIZE; col++) {
-                if (this.board[row][col] !== null) {
-                    count += 1;
-                }
-            }
-        }
+        this.cells.forEach((cell, index) => {
+            const row = Math.floor(index / BOARD_SIZE);
+            const col = index % BOARD_SIZE;
+            const value = displayBoard[row][col];
+            const filled = value !== null;
 
-        return count;
-    }
+            cell.className = `cell ${filled ? 'filled' : 'empty'}`;
+            cell.textContent = filled ? value : '';
+            cell.tabIndex = filled ? -1 : 0;
+            cell.setAttribute('aria-disabled', String(filled || locked));
+            cell.setAttribute('aria-label',
+                `Row ${row + 1}, column ${col + 1}, ${filled ? `tile ${value}` : 'empty'}`);
+        });
 
-    render() {
-        this.boardElement.innerHTML = '';
-
-        const cellSize = Math.min(
-            window.innerWidth / (BOARD_SIZE + 2),
-            (window.innerHeight - 250) / (BOARD_SIZE + 2)
+        this.streamNumbersElement.replaceChildren(
+            ...this.stream.map((value, i) => {
+                const span = document.createElement('span');
+                span.className = i === 0 ? 'stream-num current' : 'stream-num';
+                span.textContent = value;
+                return span;
+            })
         );
-        const fontSize = Math.max(cellSize * 0.4, 12);
-
-        for (let row = 0; row < BOARD_SIZE; row++) {
-            for (let col = 0; col < BOARD_SIZE; col++) {
-                const cell = document.createElement('div');
-                cell.className = 'cell';
-                cell.style.fontSize = `${fontSize}px`;
-
-                const value = this.board[row][col];
-                if (value !== null) {
-                    cell.textContent = value;
-                    cell.classList.add('filled');
-                } else {
-                    cell.classList.add('empty');
-                    if (!this.isResolvingMove) {
-                        cell.addEventListener('click', () => this.placeNumber(row, col));
-                    }
-                }
-
-                this.boardElement.appendChild(cell);
-            }
-        }
-
-        this.streamNumbersElement.innerHTML = '';
-        for (let i = 0; i < STREAM_LENGTH; i++) {
-            const span = document.createElement('span');
-            span.className = 'stream-num';
-            if (i === 0) {
-                span.classList.add('current');
-            }
-            span.textContent = this.stream[i];
-            this.streamNumbersElement.appendChild(span);
-        }
 
         this.scoreElement.textContent = this.score;
         this.movesElement.textContent = this.moves;
-        this.remainingElement.textContent = this.getRemainingTiles();
+        this.remainingElement.textContent = countFilled(this.board);
+
+        if (this.statusElement) {
+            this.statusElement.textContent =
+                `Score ${this.score}. Moves ${this.moves}. ${countFilled(this.board)} tiles left. ` +
+                `Place ${this.stream[0]}.`;
+        }
     }
 
     saveGameState() {
-        const gameState = {
+        writeStorage('currentGame', {
             board: this.board,
             stream: this.stream,
             score: this.score,
             moves: this.moves,
             gameStatus: this.gameStatus,
             savedAt: new Date().toISOString()
-        };
-
-        localStorage.setItem('currentGame', JSON.stringify(gameState));
-    }
-
-    loadGameState() {
-        try {
-            const data = localStorage.getItem('currentGame');
-            return data ? JSON.parse(data) : null;
-        } catch (error) {
-            console.warn('Failed to load saved game. Resetting current game state.', error);
-            localStorage.removeItem('currentGame');
-            return null;
-        }
+        });
     }
 }
 

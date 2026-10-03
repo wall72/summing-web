@@ -1,4 +1,4 @@
-﻿# Summing Mobile
+# Summing Mobile
 
 Summing Mobile is a small browser puzzle game inspired by classic number-placement gameplay. You place the current number on a 9x9 board and clear tiles when the last digit of the neighbour sum matches the placed number.
 
@@ -19,7 +19,9 @@ Summing Mobile is a small browser puzzle game inspired by classic number-placeme
 - Animated tile placement, match, and removal states
 - Local leaderboard stored in `localStorage`
 - Saved in-progress game restored from `localStorage`
-- Browser test page for basic logic checks
+- Automated logic tests (`npm test`)
+- Keyboard and screen-reader friendly board
+- Auto-deploy to GitHub Pages
 - Defensive recovery when saved JSON is corrupted
 
 ## Run Locally
@@ -44,22 +46,17 @@ Then open:
 http://localhost:8000
 ```
 
-## Test Page
+## Tests
 
-Open the lightweight browser test page at:
-
-```text
-http://localhost:8000/test.html
+```bash
+npm test
 ```
 
-The current test page checks:
+Runs `tests/logic.test.js` with Node's built-in test runner (Node 18+). It covers board and stream creation, match and non-match detection, end-state detection, saved-data validation, and leaderboard ordering.
 
-- board initialization
-- stream length
-- match detection
-- non-match detection
-- clear scoring without bonus leakage
-- clear-state bonus handling
+## Play Online
+
+The game is deployed to GitHub Pages by `.github/workflows/pages.yml` on every push to `master`: https://wall72.github.io/summing-web/
 
 ## Project Structure
 
@@ -67,8 +64,11 @@ The current test page checks:
 .
 |-- index.html
 |-- styles.css
-|-- game.js
-|-- test.html
+|-- logic.js        pure game logic (no DOM)
+|-- game.js         rendering, input, animation, storage
+|-- tests/
+|-- .github/workflows/pages.yml
+|-- package.json
 |-- README.md
 `-- CLAUDE.md
 ```
@@ -77,12 +77,11 @@ The current test page checks:
 
 - No undo or hint system
 - No server-backed leaderboard
-- No keyboard controls
 - UI copy is currently in English only
 
-## Recent Fixes
+## Recent Changes
 
-- fixed broken HTML/test page markup caused by encoding issues
-- fixed move-lock sequencing so repeated placements work
-- fixed match animation flow to avoid premature rerender
-- added recovery for corrupted saved game and leaderboard data
+- split pure game logic into `logic.js` and added automated tests
+- saved games are validated before being restored; a finished game reopens on its result screen
+- moves are saved immediately, so reloading mid-animation no longer loses a move
+- board cells are real buttons (keyboard + screen reader), rendered once and updated in place

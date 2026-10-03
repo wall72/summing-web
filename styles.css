@@ -191,9 +191,14 @@ body {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     width: min(100%, 600px);
     aspect-ratio: 1;
+    container-type: inline-size;
 }
 
 .cell {
+    font-family: inherit;
+    font-size: calc(100cqw / 9 * 0.42);
+    padding: 0;
+    color: inherit;
     background: white;
     border: 2px solid #dee2e6;
     border-radius: 6px;
@@ -224,7 +229,6 @@ body {
     color: white;
     cursor: default;
     border-color: #FF6B9D;
-    font-size: 1.8rem;
 }
 
 .cell.new-tile {
@@ -449,7 +453,6 @@ body {
     .stat-value { font-size: 1.3rem; }
     .stream-num { width: 45px; height: 45px; font-size: 1.4rem; }
     .board { gap: 2px; padding: 6px; }
-    .cell.filled { font-size: 1.5rem; }
 }
 
 @media (display-mode: standalone) {
@@ -551,4 +554,27 @@ body {
     .stat-value {
         font-size: 1.3rem;
     }
+}
+
+.cell:focus-visible {
+    outline: 3px solid #667eea;
+    outline-offset: 1px;
+}
+
+.cell[aria-disabled="true"].empty {
+    cursor: not-allowed;
+}
+
+.entries-empty {
+    text-align: center;
+    color: #6c757d;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
 }

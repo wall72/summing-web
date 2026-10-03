@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -6,6 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <title>Summing Mobile</title>
+    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -28,6 +29,8 @@
                     </div>
                 </div>
             </header>
+
+            <div id="status" class="sr-only" aria-live="polite"></div>
 
             <div class="game-content">
                 <div class="stream-horizontal">
@@ -79,11 +82,11 @@
 
             <div class="leaderboard-actions">
                 <button id="newGameBtn" class="btn btn-primary">New Game</button>
-                <button id="continueBtn" class="btn btn-secondary hidden">Continue</button>
             </div>
         </div>
     </div>
 
+    <script src="logic.js"></script>
     <script src="game.js"></script>
 </body>
 </html>
