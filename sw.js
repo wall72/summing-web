@@ -1,6 +1,6 @@
 // Cache-first app shell. The whole shell is cached atomically per CACHE version, so files from
 // different releases are never mixed. Bump CACHE whenever any file in SHELL changes.
-const CACHE = 'summing-v2';
+const CACHE = 'summing-v3';
 const SHELL = ['./', 'index.html', 'styles.css', 'logic.js', 'game.js', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', event => {
