@@ -5,6 +5,7 @@
     const LEADERBOARD_LIMIT = 20;
     const POINTS_PER_TILE = 10;
     const CLEAR_BONUS = 500;
+    const UNDO_LIMIT = 3;
 
     const DIRECTIONS = [
         [-1, -1], [-1, 0], [-1, 1],
@@ -92,6 +93,36 @@
             && getStatus(board) === game.gameStatus;
     }
 
+    // Snapshot of the state before a move. `pendingDigit` is the digit that move appended to the stream;
+    // it is reused when the move is replayed so undo cannot be used to re-roll the stream.
+    function createUndoSnapshot({ board, stream, score, moves }, pendingDigit) {
+        return {
+            board: board.map(line => [...line]),
+            stream: [...stream],
+            score,
+            moves,
+            pendingDigit
+        };
+    }
+
+    // Returns a deep copy so the caller can mutate the restored state without touching the snapshot.
+    function restoreUndoSnapshot(snapshot) {
+        return {
+            board: snapshot.board.map(line => [...line]),
+            stream: [...snapshot.stream],
+            score: snapshot.score,
+            moves: snapshot.moves,
+            pendingDigit: snapshot.pendingDigit
+        };
+    }
+
+    // A snapshot is always taken before a move that kept the game running, so it must be a playing state.
+    function isValidUndoSnapshot(snapshot) {
+        return Boolean(snapshot) && typeof snapshot === 'object'
+            && isDigit(snapshot.pendingDigit)
+            && isValidSavedGame({ ...snapshot, gameStatus: 'playing' });
+    }
+
     function isValidLeaderboardEntry(entry) {
         return Boolean(entry) && typeof entry === 'object'
             && [entry.score, entry.moves, entry.remaining, entry.timestamp].every(Number.isFinite)
@@ -109,9 +140,10 @@
     }
 
     const api = {
-        BOARD_SIZE, INITIAL_GRID_SIZE, STREAM_LENGTH, LEADERBOARD_LIMIT, POINTS_PER_TILE, CLEAR_BONUS,
+        BOARD_SIZE, INITIAL_GRID_SIZE, STREAM_LENGTH, LEADERBOARD_LIMIT, POINTS_PER_TILE, CLEAR_BONUS, UNDO_LIMIT,
         createEmptyBoard, createBoard, createStream, randomDigit, getNeighbours, findMatch,
-        countFilled, getStatus, isValidSavedGame, isValidLeaderboardEntry, compareEntries, addLeaderboardEntry
+        countFilled, getStatus, isValidSavedGame, createUndoSnapshot, restoreUndoSnapshot, isValidUndoSnapshot,
+        isValidLeaderboardEntry, compareEntries, addLeaderboardEntry
     };
 
     if (typeof module !== 'undefined' && module.exports) {

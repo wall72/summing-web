@@ -106,3 +106,49 @@ test('leaderboard sorts by score, then fewer moves, then newer; keeps 20', () =>
     assert.equal(L.isValidLeaderboardEntry({ score: 'x' }), false);
     assert.equal(L.isValidLeaderboardEntry({ ...entries[0], date: 'not a date' }), false);
 });
+
+test('UNDO_LIMIT is 3', () => {
+    assert.equal(L.UNDO_LIMIT, 3);
+});
+
+test('createUndoSnapshot copies the state and keeps the pending digit', () => {
+    const state = { board: L.createBoard(), stream: L.createStream(), score: 40, moves: 3 };
+    const snapshot = L.createUndoSnapshot(state, 7);
+    assert.deepEqual(snapshot, { ...state, pendingDigit: 7 });
+
+    state.board[4][4] = null;
+    state.stream[0] = (state.stream[0] + 1) % 10;
+    assert.notEqual(snapshot.board[4][4], null);
+    assert.notEqual(snapshot.stream[0], state.stream[0]);
+});
+
+test('restoreUndoSnapshot returns an independent copy', () => {
+    const snapshot = L.createUndoSnapshot(
+        { board: L.createBoard(), stream: [1, 2, 3, 4, 5], score: 10, moves: 1 }, 9
+    );
+    const restored = L.restoreUndoSnapshot(snapshot);
+    assert.deepEqual(restored, snapshot);
+
+    restored.board[4][4] = null;
+    restored.stream.shift();
+    assert.notEqual(snapshot.board[4][4], null);
+    assert.equal(snapshot.stream.length, 5);
+});
+
+test('isValidUndoSnapshot', () => {
+    const valid = L.createUndoSnapshot(
+        { board: L.createBoard(), stream: L.createStream(), score: 0, moves: 0 }, 0
+    );
+    assert.equal(L.isValidUndoSnapshot(valid), true);
+    assert.equal(L.isValidUndoSnapshot(null), false);
+    assert.equal(L.isValidUndoSnapshot('x'), false);
+    assert.equal(L.isValidUndoSnapshot({ ...valid, pendingDigit: 10 }), false);
+    assert.equal(L.isValidUndoSnapshot({ ...valid, pendingDigit: undefined }), false);
+    assert.equal(L.isValidUndoSnapshot({ ...valid, pendingDigit: 1.5 }), false);
+    assert.equal(L.isValidUndoSnapshot({ ...valid, stream: [1, 2] }), false);
+    assert.equal(L.isValidUndoSnapshot({ ...valid, moves: -1 }), false);
+    assert.equal(L.isValidUndoSnapshot({ ...valid, board: [[1]] }), false);
+    // a snapshot of an ended game (empty or full board) can never be undone into
+    assert.equal(L.isValidUndoSnapshot({ ...valid, board: L.createEmptyBoard() }), false);
+    assert.equal(L.isValidUndoSnapshot({ ...valid, board: L.createEmptyBoard().map(l => l.map(() => 1)) }), false);
+});
