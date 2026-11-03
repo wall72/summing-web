@@ -15,8 +15,8 @@ Summing Mobile: 9x9 숫자 배치 퍼즐 게임. 빌드 단계 없는 정적 HTM
 - `index.html` - 게임 화면(`#gameScreen`)과 결과/리더보드 화면(`#leaderboardScreen`)
 - `logic.js` - 순수 게임 로직(보드/스트림 생성, 매치, 종료 판정, 저장 데이터 검증, 리더보드 정렬). DOM/localStorage 사용 금지. 브라우저 전역 `SummingLogic` 및 Node `require` 둘 다 지원
 - `game.js` - `LeaderboardManager` + `SummingGame`(DOM 렌더링, 입력, 애니메이션, 저장). 규칙 로직은 `logic.js` 에 추가
-- `sw.js`, `manifest.webmanifest`, `icon.svg` - PWA. 캐시 대상 파일을 바꾸면 `sw.js` 의 `SHELL` 과 `CACHE` 버전, `pages.yml` 의 복사 목록을 함께 수정
-- `styles.css` - 반응형(세로/가로) 스타일, 타일 애니메이션
+- `sw.js`, `manifest.webmanifest`, `icon.svg` - PWA. 캐시 우선(버전 단위 일괄 캐시)이라 캐시 대상 파일을 바꾸면 `sw.js` 의 `CACHE` 버전을 반드시 올리고 `SHELL`, `pages.yml` 의 복사 목록도 함께 수정
+- `styles.css` - 반응형(세로/가로) 스타일, 타일 애니메이션 (모바일 터치 우선, 방향키 조작은 비목표)
 - `tests/` - `node --test` 용 단위 테스트
 - `e2e/`, `playwright.config.js` - Playwright E2E 테스트
 
@@ -39,12 +39,12 @@ Summing Mobile: 9x9 숫자 배치 퍼즐 게임. 빌드 단계 없는 정적 HTM
 - 4칸 들여쓰기, 작은따옴표, 세미콜론 사용 (기존 스타일 유지)
 - 프레임워크/번들러 도입 금지 (비목표). 바닐라 JS 유지
 - UI 문구는 한국어. `index.html` 의 정적 문구와 `game.js` 의 `TEXT`/`aria-label` 에 있음. 파일은 UTF-8(BOM 없음)
-- 비목표: 계정, 온라인 리더보드, 멀티플레이, 오디오, undo/힌트
+- 비목표: 계정, 온라인 리더보드, 멀티플레이, 오디오, undo/힌트, 방향키 이동
 - `game.js` 의 애니메이션 상수는 `styles.css` 의 duration 과 맞출 것
 
 ## 개선 과제
 
-완료: 저장 데이터 검증, 종료 후 결과 화면 복원, 이동 즉시 저장, 이벤트 위임 + 셀 재사용 렌더, CSS(cqw) 기반 글자 크기, 리더보드 textContent 렌더, 로직 분리 + `node --test`, async 애니메이션 흐름, BOM 제거, `.gitignore`, 키보드/스크린리더 지원(`button` 셀, `aria-label`, `aria-live`), GitHub Pages 배포, 한글 UI, 최고 점수 표시, 게임 중 새 게임(진행 중이면 확인 대화상자)/기록 보기 버튼, PWA(manifest + service worker), MIT 라이선스, Playwright E2E 테스트와 CI.
+완료: 저장 데이터 검증, 종료 후 결과 화면 복원, 이동 즉시 저장, 이벤트 위임 + 셀 재사용 렌더, CSS(cqw) 기반 글자 크기, 리더보드 textContent 렌더, 로직 분리 + `node --test`, async 애니메이션 흐름, BOM 제거, `.gitignore`, 키보드/스크린리더 지원(`button` 셀, `aria-label`, `aria-live`), GitHub Pages 배포, 한글 UI, 최고 점수 표시, 게임 중 새 게임(진행 중이면 확인 대화상자)/기록 보기 버튼, PWA(manifest + service worker), MIT 라이선스, Playwright E2E 테스트와 CI, 새 게임 직후 결과 화면 덮어쓰기 경쟁 상태·저장 상태 불일치·다중 탭 기록 유실 수정, 서비스 워커 일괄 버전 캐시, 변경된 셀만 갱신하는 렌더와 `prefers-reduced-motion`, 확대(zoom) 허용.
 
 남은 후보: 없음 (새 아이디어는 비목표 목록을 먼저 확인).
 
