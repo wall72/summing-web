@@ -54,3 +54,4 @@ Summing Mobile: 9x9 숫자 배치 퍼즐 게임. 빌드 단계 없는 정적 HTM
 
 - 규칙을 바꾸면 이 파일, README.md, `tests/` 를 함께 갱신
 - 변경 후 `npm test` 와 `npm run test:e2e` 실행 (UI/흐름을 바꾸면 `e2e/` 도 갱신)
+- 브랜치는 `master` 만 사용. 기능 브랜치/PR 없이 `master` 에 직접 커밋하고 푸시 (푸시 시 `pages.yml` 이 테스트 후 배포하므로 푸시 전 `npm test`, `npm run test:e2e` 통과 확인)
