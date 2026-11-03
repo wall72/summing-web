@@ -2,6 +2,7 @@ const {
     BOARD_SIZE, STREAM_LENGTH, POINTS_PER_TILE, CLEAR_BONUS,
     createBoard, createStream, randomDigit, findMatch, countFilled, getStatus,
     UNDO_LIMIT, isValidSavedGame, createUndoSnapshot, restoreUndoSnapshot, readSavedUndo,
+    HINT_LIMIT, findHint, readSavedHints,
     isValidLeaderboardEntry, addLeaderboardEntry
 } = SummingLogic;
 
@@ -20,7 +21,9 @@ const TEXT = {
     end: '종료',
     moves: '이동',
     confirmNewGame: '진행 중인 게임을 버리고 새 게임을 시작할까요?',
-    undone: left => `되돌렸습니다. 남은 횟수 ${left}회. `
+    undone: left => `되돌렸습니다. 남은 횟수 ${left}회. `,
+    hintFound: (row, col, left) => `힌트: ${row + 1}행 ${col + 1}열에 놓으면 제거됩니다. 남은 힌트 ${left}회. `,
+    noHint: '지금은 매치되는 칸이 없습니다. '
 };
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -89,6 +92,8 @@ class SummingGame {
         this.undoState = null;
         this.undosLeft = UNDO_LIMIT;
         this.pendingDigit = null;
+        this.hintsLeft = HINT_LIMIT;
+        this.hintCell = null;
         this.statusPrefix = '';
         this.leaderboard = new LeaderboardManager();
 
@@ -122,12 +127,15 @@ class SummingGame {
         this.recordsBtn = document.getElementById('recordsBtn');
         this.undoBtn = document.getElementById('undoBtn');
         this.undoCountElement = document.getElementById('undoCount');
+        this.hintBtn = document.getElementById('hintBtn');
+        this.hintCountElement = document.getElementById('hintCount');
 
         this.newGameBtn.addEventListener('click', () => this.startNewGame());
         this.continueBtn.addEventListener('click', () => this.showGameScreen());
         this.restartBtn.addEventListener('click', () => this.confirmNewGame());
         this.recordsBtn.addEventListener('click', () => this.showResult());
         this.undoBtn.addEventListener('click', () => this.undoMove());
+        this.hintBtn.addEventListener('click', () => this.showHint());
     }
 
     // Build the 81 cells once; render() only updates them. One delegated listener handles input.
@@ -173,6 +181,7 @@ class SummingGame {
             this.gameStatus = saved.gameStatus;
             ({ undoState: this.undoState, undosLeft: this.undosLeft, pendingDigit: this.pendingDigit } =
                 readSavedUndo(saved));
+            this.hintsLeft = readSavedHints(saved);
             this.render();
 
             if (this.gameStatus === 'playing') {
@@ -198,6 +207,8 @@ class SummingGame {
         this.undoState = null;
         this.undosLeft = UNDO_LIMIT;
         this.pendingDigit = null;
+        this.hintsLeft = HINT_LIMIT;
+        this.hintCell = null;
         this.showGameScreen();
         this.render();
         this.saveGameState();
@@ -219,6 +230,7 @@ class SummingGame {
         }
 
         this.isResolvingMove = true;
+        this.hintCell = null;
         const generation = this.generation;
 
         // The digit this move appends to the stream. After an undo the same digit is reused,
@@ -305,7 +317,34 @@ class SummingGame {
         this.pendingDigit = restored.pendingDigit;
         this.undoState = null;
         this.undosLeft -= 1;
+        this.hintCell = null;
         this.statusPrefix = TEXT.undone(this.undosLeft);
+        this.render();
+        this.saveGameState();
+    }
+
+    canHint() {
+        return this.hintsLeft > 0 && this.gameStatus === 'playing' && !this.isResolvingMove;
+    }
+
+    // Highlights the best matching empty cell for the current digit. Costs one hint only when a cell is found.
+    // The highlight is transient (not saved) and cleared by the next move, undo or new game.
+    showHint() {
+        if (!this.canHint()) {
+            return;
+        }
+
+        const found = findHint(this.board, this.stream[0]);
+        if (!found) {
+            this.statusPrefix = TEXT.noHint;
+            this.statusElement.textContent = '';
+            this.render();
+            return;
+        }
+
+        this.hintsLeft -= 1;
+        this.hintCell = found;
+        this.statusPrefix = TEXT.hintFound(found[0], found[1], this.hintsLeft);
         this.render();
         this.saveGameState();
     }
@@ -387,8 +426,11 @@ class SummingGame {
     render(displayBoard = this.board) {
         const locked = this.isResolvingMove || this.gameStatus !== 'playing';
 
-        this.animatedCells.forEach(cell => cell.classList.remove('new-tile', 'matched', 'removing'));
+        this.animatedCells.forEach(cell => cell.classList.remove('new-tile', 'matched', 'removing', 'hint'));
         this.animatedCells.length = 0;
+        if (this.hintCell && displayBoard === this.board) {
+            this.animate([this.hintCell], 'hint');
+        }
 
         this.cells.forEach((cell, index) => {
             const row = Math.floor(index / BOARD_SIZE);
@@ -442,6 +484,14 @@ class SummingGame {
         if (this.undoCountElement.textContent !== String(this.undosLeft)) {
             this.undoCountElement.textContent = this.undosLeft;
         }
+
+        const hintAvailable = this.canHint();
+        if (this.hintBtn.disabled === hintAvailable) {
+            this.hintBtn.disabled = !hintAvailable;
+        }
+        if (this.hintCountElement.textContent !== String(this.hintsLeft)) {
+            this.hintCountElement.textContent = this.hintsLeft;
+        }
     }
 
     saveGameState() {
@@ -453,6 +503,7 @@ class SummingGame {
             gameStatus: this.gameStatus,
             undo: this.undoState,
             undosLeft: this.undosLeft,
+            hintsLeft: this.hintsLeft,
             pendingDigit: this.pendingDigit,
             savedAt: new Date().toISOString()
         });

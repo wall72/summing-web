@@ -6,6 +6,7 @@
     const POINTS_PER_TILE = 10;
     const CLEAR_BONUS = 500;
     const UNDO_LIMIT = 3;
+    const HINT_LIMIT = 3;
 
     const DIRECTIONS = [
         [-1, -1], [-1, 0], [-1, 1],
@@ -134,6 +135,35 @@
         return { undoState, undosLeft, pendingDigit };
     }
 
+    // Best empty cell for placing `digit`: the match that clears the most tiles, first in row-major order on ties.
+    // Returns [row, col] or null when no placement matches. The board is left unchanged.
+    function findHint(board, digit) {
+        const work = board.map(line => [...line]);
+        let best = null;
+        let bestCount = 0;
+        for (let row = 0; row < BOARD_SIZE; row++) {
+            for (let col = 0; col < BOARD_SIZE; col++) {
+                if (work[row][col] !== null) {
+                    continue;
+                }
+                work[row][col] = digit;
+                const match = findMatch(work, row, col);
+                work[row][col] = null;
+                if (match && match.length > bestCount) {
+                    best = [row, col];
+                    bestCount = match.length;
+                }
+            }
+        }
+        return best;
+    }
+
+    // Missing or corrupt values fall back to the full allowance without discarding the game.
+    function readSavedHints(saved) {
+        return Number.isInteger(saved.hintsLeft) && saved.hintsLeft >= 0 && saved.hintsLeft <= HINT_LIMIT
+            ? saved.hintsLeft : HINT_LIMIT;
+    }
+
     function isValidLeaderboardEntry(entry) {
         return Boolean(entry) && typeof entry === 'object'
             && [entry.score, entry.moves, entry.remaining, entry.timestamp].every(Number.isFinite)
@@ -151,7 +181,8 @@
     }
 
     const api = {
-        BOARD_SIZE, INITIAL_GRID_SIZE, STREAM_LENGTH, LEADERBOARD_LIMIT, POINTS_PER_TILE, CLEAR_BONUS, UNDO_LIMIT,
+        BOARD_SIZE, INITIAL_GRID_SIZE, STREAM_LENGTH, LEADERBOARD_LIMIT, POINTS_PER_TILE, CLEAR_BONUS, UNDO_LIMIT, HINT_LIMIT,
+        findHint, readSavedHints,
         createEmptyBoard, createBoard, createStream, randomDigit, getNeighbours, findMatch,
         countFilled, getStatus, isValidSavedGame, createUndoSnapshot, restoreUndoSnapshot, isValidUndoSnapshot, readSavedUndo,
         isValidLeaderboardEntry, compareEntries, addLeaderboardEntry

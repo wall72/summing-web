@@ -173,7 +173,7 @@ test.describe('service worker', () => {
             const cache = await caches.open(keys[0]);
             return { keys, urls: (await cache.keys()).map(r => new URL(r.url).pathname).sort() };
         });
-        expect(cached.keys).toEqual(['summing-v3']);
+        expect(cached.keys).toEqual(['summing-v4']);
         expect(cached.urls).toEqual(
             ['/', '/game.js', '/icon.svg', '/index.html', '/logic.js', '/manifest.webmanifest', '/styles.css']
         );
@@ -377,12 +377,82 @@ test.describe('undo button', () => {
     test('fits on screen with the other buttons', async ({ page }) => {
         await page.goto('/');
         const viewport = page.viewportSize();
-        for (const id of ['undoBtn', 'restartBtn', 'recordsBtn']) {
+        for (const id of ['undoBtn', 'hintBtn', 'restartBtn', 'recordsBtn']) {
             const box = await page.locator(`#${id}`).boundingBox();
             expect(box.x).toBeGreaterThanOrEqual(0);
             expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
             expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
             expect(box.height).toBeGreaterThanOrEqual(44);
         }
+    });
+});
+
+test.describe('hint button', () => {
+    const hintBtn = page => page.locator('#hintBtn');
+
+    test('highlights the matching cell, costs one hint and is cleared by placing', async ({ page }) => {
+        await seed(page, 'currentGame', matchSeed());
+        await page.goto('/');
+        await expect(page.locator('#hintCount')).toHaveText('3');
+
+        await hintBtn(page).click();
+        await expect(page.locator('.cell.hint')).toHaveCount(1);
+        await expect(page.locator('.cell').nth(3 * 9 + 4)).toHaveClass(/hint/);
+        await expect(page.locator('#hintCount')).toHaveText('2');
+        await expect(page.locator('#status')).toContainText('힌트: 4행 5열');
+
+        // placing the hinted digit there really matches (3 + 4 = 7)
+        await page.locator('.cell').nth(3 * 9 + 4).click();
+        await expect(page.locator('#score')).toHaveText('30');
+        await expect(page.locator('.cell.hint')).toHaveCount(0);
+    });
+
+    test('does not cost a hint when nothing matches', async ({ page }) => {
+        const board = Array.from({ length: 9 }, () => Array(9).fill(null));
+        board[0][0] = 9;
+        await seed(page, 'currentGame', savedGame({ board, stream: [5, 5, 5, 5, 5] }));
+        await page.goto('/');
+
+        await hintBtn(page).click();
+        await expect(page.locator('.cell.hint')).toHaveCount(0);
+        await expect(page.locator('#hintCount')).toHaveText('3');
+        await expect(page.locator('#status')).toContainText('매치되는 칸이 없습니다');
+    });
+
+    test('is limited to three, survives a reload and resets on a new game', async ({ page }) => {
+        await seed(page, 'currentGame', matchSeed());
+        await page.goto('/');
+
+        for (const left of ['2', '1', '0']) {
+            await hintBtn(page).click();
+            await expect(page.locator('#hintCount')).toHaveText(left);
+        }
+        await expect(hintBtn(page)).toBeDisabled();
+
+        await page.reload();
+        await expect(page.locator('#hintCount')).toHaveText('0');
+        await expect(hintBtn(page)).toBeDisabled();
+        await expect(page.locator('.cell.hint')).toHaveCount(0);
+
+        await page.locator('#restartBtn').click();
+        await expect(page.locator('#hintCount')).toHaveText('3');
+        await expect(hintBtn(page)).toBeEnabled();
+    });
+
+    test('is disabled while a move is animating', async ({ page }) => {
+        await seed(page, 'currentGame', matchSeed());
+        await page.goto('/');
+        await page.locator('.cell').nth(5 * 9 + 4).click();
+        await expect(hintBtn(page)).toBeDisabled();
+        await expect(hintBtn(page)).toBeEnabled();
+    });
+
+    test('a corrupt hintsLeft does not discard the saved game', async ({ page }) => {
+        const saved = JSON.parse(matchSeed());
+        saved.hintsLeft = 99;
+        await seed(page, 'currentGame', JSON.stringify(saved));
+        await page.goto('/');
+        await expect(page.locator('.cell.filled')).toHaveCount(3);
+        await expect(page.locator('#hintCount')).toHaveText('3');
     });
 });

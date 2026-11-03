@@ -170,3 +170,37 @@ test('readSavedUndo falls back to defaults for old or corrupt saves', () => {
     // a snapshot and a pending digit never coexist
     assert.equal(L.readSavedUndo({ undo: snapshot, pendingDigit: 2 }).pendingDigit, null);
 });
+
+test('findHint picks the match that clears the most tiles, first in row-major order on ties', () => {
+    const board = empty();
+    board[4][4] = 3;
+    board[4][5] = 4;
+    // 7 matches next to both tiles; (3,4) is the first such cell
+    assert.deepEqual(L.findHint(board, 7), [3, 4]);
+    // a lone neighbour of the 3 matches a 3 and clears 2 tiles; no cell reaches 7 mod 10 with only the 4
+    assert.deepEqual(L.findHint(board, 3), [3, 3]);
+    // an extra pair elsewhere that clears 3 tiles wins over the earlier 2-tile match
+    board[8][0] = 1;
+    board[8][2] = 1;
+    assert.deepEqual(L.findHint(board, 2), [7, 1]);
+});
+
+test('findHint returns null without a match and does not modify the board', () => {
+    const board = empty();
+    board[4][4] = 3;
+    const before = JSON.stringify(board);
+    assert.equal(L.findHint(board, 5), null);
+    assert.equal(L.findHint(empty(), 0), null);
+    assert.equal(JSON.stringify(board), before);
+});
+
+test('readSavedHints falls back to the full allowance for old or corrupt saves', () => {
+    assert.equal(L.HINT_LIMIT, 3);
+    assert.equal(L.readSavedHints({}), 3);
+    assert.equal(L.readSavedHints({ hintsLeft: 0 }), 0);
+    assert.equal(L.readSavedHints({ hintsLeft: 2 }), 2);
+    assert.equal(L.readSavedHints({ hintsLeft: 4 }), 3);
+    assert.equal(L.readSavedHints({ hintsLeft: -1 }), 3);
+    assert.equal(L.readSavedHints({ hintsLeft: 1.5 }), 3);
+    assert.equal(L.readSavedHints({ hintsLeft: '1' }), 3);
+});

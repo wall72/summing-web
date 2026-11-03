@@ -255,6 +255,17 @@ body {
     animation: removeAnimation 0.4s ease forwards;
 }
 
+.cell.hint {
+    border-color: #667eea;
+    background: #e7ecff;
+    animation: hintPulse 1s ease-in-out infinite;
+}
+
+@keyframes hintPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7); }
+    50% { box-shadow: 0 0 0 6px rgba(102, 126, 234, 0); }
+}
+
 @keyframes placeAnimation {
     0% { transform: scale(0); opacity: 0; }
     50% { transform: scale(1.1); }
@@ -281,8 +292,14 @@ body {
 @media (prefers-reduced-motion: reduce) {
     .cell.new-tile,
     .cell.matched,
-    .cell.matched::after {
+    .cell.matched::after,
+    .cell.hint {
         animation: none;
+    }
+
+    .cell.hint {
+        outline: 3px solid #667eea;
+        outline-offset: -3px;
     }
 
     .cell.removing {
