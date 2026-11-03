@@ -48,8 +48,12 @@ function writeStorage(key, value) {
 
 class LeaderboardManager {
     constructor() {
+        this.entries = this.load();
+    }
+
+    load() {
         const saved = readStorage('leaderboard');
-        this.entries = Array.isArray(saved) ? saved.filter(isValidLeaderboardEntry) : [];
+        return Array.isArray(saved) ? saved.filter(isValidLeaderboardEntry) : [];
     }
 
     addEntry(score, moves, remaining, status) {
@@ -61,7 +65,8 @@ class LeaderboardManager {
             date: new Date().toISOString(),
             timestamp: Date.now()
         };
-        this.entries = addLeaderboardEntry(this.entries, entry);
+        // Re-read first so records saved by another tab are not overwritten.
+        this.entries = addLeaderboardEntry(this.load(), entry);
         writeStorage('leaderboard', this.entries);
     }
 
@@ -78,6 +83,7 @@ class SummingGame {
         this.moves = 0;
         this.gameStatus = 'playing';
         this.isResolvingMove = false;
+        this.generation = 0;
         this.leaderboard = new LeaderboardManager();
 
         this.initElements();
@@ -161,6 +167,8 @@ class SummingGame {
     }
 
     startNewGame() {
+        // Invalidates any move animation still running for the previous game.
+        this.generation += 1;
         this.board = createBoard();
         this.stream = createStream();
         this.score = 0;
@@ -188,6 +196,7 @@ class SummingGame {
         }
 
         this.isResolvingMove = true;
+        const generation = this.generation;
 
         this.board[row][col] = this.stream[0];
         const matchedCells = findMatch(this.board, row, col);
@@ -218,10 +227,19 @@ class SummingGame {
 
         if (matchedCells) {
             await delay(PLACE_DELAY_MS);
+            if (generation !== this.generation) {
+                return;
+            }
             matchedCells.forEach(([r, c]) => this.getCellElement(r, c).classList.add('matched'));
             await delay(MATCH_DELAY_MS);
+            if (generation !== this.generation) {
+                return;
+            }
             matchedCells.forEach(([r, c]) => this.getCellElement(r, c).classList.add('removing'));
             await delay(REMOVE_DELAY_MS);
+            if (generation !== this.generation) {
+                return;
+            }
         }
 
         this.isResolvingMove = false;
@@ -229,7 +247,9 @@ class SummingGame {
 
         if (this.gameStatus !== 'playing') {
             await delay(RESULT_DELAY_MS);
-            this.showResult();
+            if (generation === this.generation) {
+                this.showResult();
+            }
         }
     }
 

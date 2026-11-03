@@ -120,3 +120,41 @@ test('cells are keyboard operable', async ({ page }) => {
     await page.keyboard.press('Enter');
     await expect(page.locator('#moves')).toHaveText('1');
 });
+
+test('starting a new game right after a game ends is not overridden by the late result screen', async ({ page }) => {
+    const board = Array.from({ length: 9 }, () => Array(9).fill(null));
+    board[4][4] = 3;
+    board[4][5] = 4;
+    await seed(page, 'currentGame', savedGame({ board, stream: [7, 1, 2, 3, 4] }));
+    await page.goto('/');
+
+    await page.locator('.cell').nth(5 * 9 + 4).click();
+    // animation (1.2s) is over but the result screen (1s later) is not shown yet: start a new game
+    await page.waitForTimeout(1500);
+    await expect(page.locator('#gameScreen')).toBeVisible();
+    await page.locator('#restartBtn').click();
+    await expect(page.locator('.cell.filled')).toHaveCount(49);
+
+    await page.waitForTimeout(1500);
+    await expect(page.locator('#gameScreen')).toBeVisible();
+    await expect(page.locator('#leaderboardScreen')).toBeHidden();
+    await expect(page.locator('.cell.filled')).toHaveCount(49);
+    await expect(page.locator('.cell.matched, .cell.removing')).toHaveCount(0);
+});
+
+test('records saved by another tab are kept', async ({ context }) => {
+    const board = Array.from({ length: 9 }, () => Array(9).fill(null));
+    board[4][4] = 3;
+    board[4][5] = 4;
+    const other = { score: 999, moves: 1, remaining: 0, status: 'cleared', date: new Date().toISOString(), timestamp: 1 };
+
+    const page = await context.newPage();
+    await seed(page, 'currentGame', savedGame({ board, stream: [7, 1, 2, 3, 4] }));
+    await page.goto('/');
+    // another tab writes a record after this tab has loaded the leaderboard
+    await page.evaluate(entry => localStorage.setItem('leaderboard', JSON.stringify([entry])), other);
+
+    await page.locator('.cell').nth(5 * 9 + 4).click();
+    await expect(page.locator('#leaderboardScreen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#leaderboardEntries .entry')).toHaveCount(2);
+});

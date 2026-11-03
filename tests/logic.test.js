@@ -76,6 +76,17 @@ test('isValidSavedGame', () => {
     assert.equal(L.isValidSavedGame({ ...valid, board: badCell }), false);
 });
 
+test('isValidSavedGame rejects a status that does not match the board', () => {
+    const base = { stream: L.createStream(), score: 0, moves: 0 };
+    const full = L.createEmptyBoard().map(line => line.map(() => 1));
+    assert.equal(L.isValidSavedGame({ ...base, board: L.createBoard(), gameStatus: 'cleared' }), false);
+    assert.equal(L.isValidSavedGame({ ...base, board: L.createBoard(), gameStatus: 'gameover' }), false);
+    assert.equal(L.isValidSavedGame({ ...base, board: full, gameStatus: 'playing' }), false);
+    assert.equal(L.isValidSavedGame({ ...base, board: full, gameStatus: 'gameover' }), true);
+    assert.equal(L.isValidSavedGame({ ...base, board: L.createEmptyBoard(), gameStatus: 'playing' }), false);
+    assert.equal(L.isValidSavedGame({ ...base, board: L.createEmptyBoard(), gameStatus: 'cleared' }), true);
+});
+
 test('leaderboard sorts by score, then fewer moves, then newer; keeps 20', () => {
     const mk = (score, moves, timestamp) => ({
         score, moves, remaining: 0, status: 'cleared', date: '2026-01-01T00:00:00.000Z', timestamp
@@ -93,4 +104,5 @@ test('leaderboard sorts by score, then fewer moves, then newer; keeps 20', () =>
     assert.equal(entries.length, 20);
     assert.ok(L.isValidLeaderboardEntry(entries[0]));
     assert.equal(L.isValidLeaderboardEntry({ score: 'x' }), false);
+    assert.equal(L.isValidLeaderboardEntry({ ...entries[0], date: 'not a date' }), false);
 });

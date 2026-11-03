@@ -88,14 +88,16 @@
             && stream.every(isDigit)
             && Number.isInteger(score) && score >= 0
             && Number.isInteger(moves) && moves >= 0
-            && ['playing', 'cleared', 'gameover'].includes(game.gameStatus);
+            && ['playing', 'cleared', 'gameover'].includes(game.gameStatus)
+            && getStatus(board) === game.gameStatus;
     }
 
     function isValidLeaderboardEntry(entry) {
         return Boolean(entry) && typeof entry === 'object'
             && [entry.score, entry.moves, entry.remaining, entry.timestamp].every(Number.isFinite)
             && (entry.status === 'cleared' || entry.status === 'gameover')
-            && typeof entry.date === 'string';
+            && typeof entry.date === 'string'
+            && Number.isFinite(Date.parse(entry.date));
     }
 
     function compareEntries(a, b) {
