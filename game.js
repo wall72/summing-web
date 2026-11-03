@@ -1,7 +1,8 @@
 const {
     BOARD_SIZE, STREAM_LENGTH, POINTS_PER_TILE, CLEAR_BONUS,
     createBoard, createStream, randomDigit, findMatch, countFilled, getStatus,
-    isValidSavedGame, isValidLeaderboardEntry, addLeaderboardEntry
+    UNDO_LIMIT, isValidSavedGame, createUndoSnapshot, restoreUndoSnapshot, readSavedUndo,
+    isValidLeaderboardEntry, addLeaderboardEntry
 } = SummingLogic;
 
 // Keep in sync with the CSS animation durations in styles.css.
@@ -84,6 +85,9 @@ class SummingGame {
         this.gameStatus = 'playing';
         this.isResolvingMove = false;
         this.generation = 0;
+        this.undoState = null;
+        this.undosLeft = UNDO_LIMIT;
+        this.pendingDigit = null;
         this.leaderboard = new LeaderboardManager();
 
         this.initElements();
@@ -162,6 +166,8 @@ class SummingGame {
             this.score = saved.score;
             this.moves = saved.moves;
             this.gameStatus = saved.gameStatus;
+            ({ undoState: this.undoState, undosLeft: this.undosLeft, pendingDigit: this.pendingDigit } =
+                readSavedUndo(saved));
             this.render();
 
             if (this.gameStatus === 'playing') {
@@ -184,6 +190,9 @@ class SummingGame {
         this.moves = 0;
         this.gameStatus = 'playing';
         this.isResolvingMove = false;
+        this.undoState = null;
+        this.undosLeft = UNDO_LIMIT;
+        this.pendingDigit = null;
         this.showGameScreen();
         this.render();
         this.saveGameState();
@@ -207,13 +216,19 @@ class SummingGame {
         this.isResolvingMove = true;
         const generation = this.generation;
 
+        // The digit this move appends to the stream. After an undo the same digit is reused,
+        // so undoing and replaying cannot be used to re-roll the stream.
+        const appendedDigit = this.pendingDigit === null ? randomDigit() : this.pendingDigit;
+        this.pendingDigit = null;
+        const snapshot = createUndoSnapshot(this, appendedDigit);
+
         this.board[row][col] = this.stream[0];
         const matchedCells = findMatch(this.board, row, col);
         const boardBeforeClear = this.board.map(line => [...line]);
 
         this.moves += 1;
         this.stream.shift();
-        this.stream.push(randomDigit());
+        this.stream.push(appendedDigit);
 
         if (matchedCells) {
             matchedCells.forEach(([r, c]) => {
@@ -226,6 +241,8 @@ class SummingGame {
         if (this.gameStatus === 'cleared') {
             this.score += CLEAR_BONUS;
         }
+        // A finished game is already on the leaderboard, so it cannot be undone.
+        this.undoState = this.gameStatus === 'playing' ? snapshot : null;
         if (this.gameStatus !== 'playing') {
             this.leaderboard.addEntry(this.score, this.moves, countFilled(this.board), this.gameStatus);
         }
@@ -260,6 +277,31 @@ class SummingGame {
                 this.showResult();
             }
         }
+    }
+
+    canUndo() {
+        return this.undoState !== null && this.undosLeft > 0
+            && this.gameStatus === 'playing' && !this.isResolvingMove;
+    }
+
+    // Restores the state before the last move. Not allowed while a move is animating or after the game ended.
+    undoMove() {
+        if (!this.canUndo()) {
+            return;
+        }
+
+        const restored = restoreUndoSnapshot(this.undoState);
+        // Invalidate any animation callbacks and drop leftover animation classes.
+        this.generation += 1;
+        this.board = restored.board;
+        this.stream = restored.stream;
+        this.score = restored.score;
+        this.moves = restored.moves;
+        this.pendingDigit = restored.pendingDigit;
+        this.undoState = null;
+        this.undosLeft -= 1;
+        this.render();
+        this.saveGameState();
     }
 
     animate(positions, className) {
@@ -394,6 +436,9 @@ class SummingGame {
             score: this.score,
             moves: this.moves,
             gameStatus: this.gameStatus,
+            undo: this.undoState,
+            undosLeft: this.undosLeft,
+            pendingDigit: this.pendingDigit,
             savedAt: new Date().toISOString()
         });
     }

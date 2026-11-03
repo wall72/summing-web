@@ -152,3 +152,21 @@ test('isValidUndoSnapshot', () => {
     assert.equal(L.isValidUndoSnapshot({ ...valid, board: L.createEmptyBoard() }), false);
     assert.equal(L.isValidUndoSnapshot({ ...valid, board: L.createEmptyBoard().map(l => l.map(() => 1)) }), false);
 });
+
+test('readSavedUndo falls back to defaults for old or corrupt saves', () => {
+    const snapshot = L.createUndoSnapshot(
+        { board: L.createBoard(), stream: L.createStream(), score: 0, moves: 0 }, 4
+    );
+    assert.deepEqual(L.readSavedUndo({}), { undoState: null, undosLeft: 3, pendingDigit: null });
+    assert.deepEqual(L.readSavedUndo({ undo: snapshot, undosLeft: 1 }),
+        { undoState: snapshot, undosLeft: 1, pendingDigit: null });
+    assert.deepEqual(L.readSavedUndo({ undo: null, undosLeft: 0, pendingDigit: 6 }),
+        { undoState: null, undosLeft: 0, pendingDigit: 6 });
+    // corrupt values are replaced individually
+    assert.deepEqual(L.readSavedUndo({ undo: { board: [] }, undosLeft: 9, pendingDigit: 12 }),
+        { undoState: null, undosLeft: 3, pendingDigit: null });
+    assert.equal(L.readSavedUndo({ undosLeft: 'x' }).undosLeft, 3);
+    assert.equal(L.readSavedUndo({ undosLeft: -1 }).undosLeft, 3);
+    // a snapshot and a pending digit never coexist
+    assert.equal(L.readSavedUndo({ undo: snapshot, pendingDigit: 2 }).pendingDigit, null);
+});

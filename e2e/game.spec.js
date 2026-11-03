@@ -212,3 +212,85 @@ test('a move leaves clean cells and announces the status once', async ({ page })
     await expect(page.locator('.stream-num.current')).toHaveText('1');
     expect(await page.evaluate(() => window.statusMutations)).toBe(1);
 });
+
+const matchSeed = () => {
+    const board = Array.from({ length: 9 }, () => Array(9).fill(null));
+    board[4][4] = 3;
+    board[4][5] = 4;
+    board[0][0] = 9;
+    return savedGame({ board, stream: [7, 1, 2, 3, 4] });
+};
+const idle = page => page.waitForFunction(() => game && !game.isResolvingMove);
+
+test('undoMove restores the board, stream, score and moves of the last move', async ({ page }) => {
+    await seed(page, 'currentGame', matchSeed());
+    await page.goto('/');
+
+    await page.locator('.cell').nth(5 * 9 + 4).click();
+    await expect(page.locator('#score')).toHaveText('30');
+    await idle(page);
+
+    await page.evaluate(() => game.undoMove());
+    await expect(page.locator('#score')).toHaveText('0');
+    await expect(page.locator('#moves')).toHaveText('0');
+    await expect(page.locator('.cell.filled')).toHaveCount(3);
+    await expect(page.locator('.stream-num.current')).toHaveText('7');
+    expect(await page.evaluate(() => game.undosLeft)).toBe(2);
+
+    // nothing left to undo until another move is made
+    await page.evaluate(() => game.undoMove());
+    expect(await page.evaluate(() => game.undosLeft)).toBe(2);
+});
+
+test('a replayed move appends the same digit, and undo state survives a reload', async ({ page }) => {
+    await seed(page, 'currentGame', matchSeed());
+    await page.goto('/');
+
+    await page.locator('.cell').nth(5 * 9 + 4).click();
+    await idle(page);
+    const appended = await page.evaluate(() => game.stream[4]);
+
+    await page.evaluate(() => game.undoMove());
+    await page.reload();
+    expect(await page.evaluate(() => game.undosLeft)).toBe(2);
+    expect(await page.evaluate(() => game.pendingDigit)).toBe(appended);
+
+    // replay at a different cell: the appended digit is unchanged
+    await page.locator('.cell').nth(8 * 9 + 8).click();
+    await idle(page);
+    expect(await page.evaluate(() => game.stream[4])).toBe(appended);
+    expect(await page.evaluate(() => game.pendingDigit)).toBeNull();
+    expect(await page.evaluate(() => game.canUndo())).toBe(true);
+});
+
+test('undo is unavailable after the game ends and for animating moves', async ({ page }) => {
+    const board = Array.from({ length: 9 }, () => Array(9).fill(null));
+    board[4][4] = 3;
+    board[4][5] = 4;
+    await seed(page, 'currentGame', savedGame({ board, stream: [7, 1, 2, 3, 4] }));
+    await page.goto('/');
+
+    await page.locator('.cell').nth(5 * 9 + 4).click();
+    expect(await page.evaluate(() => game.canUndo())).toBe(false);
+    await expect(page.locator('#leaderboardScreen')).toBeVisible({ timeout: 5000 });
+    expect(await page.evaluate(() => game.canUndo())).toBe(false);
+    await page.evaluate(() => game.undoMove());
+    await expect(page.locator('#finalScore')).toHaveText('530');
+});
+
+test('a save without undo fields still restores with the full undo allowance', async ({ page }) => {
+    await seed(page, 'currentGame', matchSeed());
+    await page.goto('/');
+    expect(await page.evaluate(() => game.undosLeft)).toBe(3);
+    expect(await page.evaluate(() => game.canUndo())).toBe(false);
+});
+
+test('corrupt undo fields do not discard the saved game', async ({ page }) => {
+    const saved = JSON.parse(matchSeed());
+    Object.assign(saved, { undo: { board: [[1]] }, undosLeft: 99, pendingDigit: 42 });
+    await seed(page, 'currentGame', JSON.stringify(saved));
+    await page.goto('/');
+    await expect(page.locator('.cell.filled')).toHaveCount(3);
+    expect(await page.evaluate(() => game.undosLeft)).toBe(3);
+    expect(await page.evaluate(() => game.pendingDigit)).toBeNull();
+});

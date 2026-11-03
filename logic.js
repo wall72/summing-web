@@ -123,6 +123,17 @@
             && isValidSavedGame({ ...snapshot, gameStatus: 'playing' });
     }
 
+    // Reads the undo-related fields of a saved game. Missing or corrupt values fall back to defaults
+    // without discarding the game itself (older saves have none of these fields).
+    function readSavedUndo(saved) {
+        const undoState = isValidUndoSnapshot(saved.undo) ? saved.undo : null;
+        const undosLeft = Number.isInteger(saved.undosLeft) && saved.undosLeft >= 0 && saved.undosLeft <= UNDO_LIMIT
+            ? saved.undosLeft : UNDO_LIMIT;
+        // A pending digit only exists between an undo and the replayed move, when there is no snapshot.
+        const pendingDigit = !undoState && isDigit(saved.pendingDigit) ? saved.pendingDigit : null;
+        return { undoState, undosLeft, pendingDigit };
+    }
+
     function isValidLeaderboardEntry(entry) {
         return Boolean(entry) && typeof entry === 'object'
             && [entry.score, entry.moves, entry.remaining, entry.timestamp].every(Number.isFinite)
@@ -142,7 +153,7 @@
     const api = {
         BOARD_SIZE, INITIAL_GRID_SIZE, STREAM_LENGTH, LEADERBOARD_LIMIT, POINTS_PER_TILE, CLEAR_BONUS, UNDO_LIMIT,
         createEmptyBoard, createBoard, createStream, randomDigit, getNeighbours, findMatch,
-        countFilled, getStatus, isValidSavedGame, createUndoSnapshot, restoreUndoSnapshot, isValidUndoSnapshot,
+        countFilled, getStatus, isValidSavedGame, createUndoSnapshot, restoreUndoSnapshot, isValidUndoSnapshot, readSavedUndo,
         isValidLeaderboardEntry, compareEntries, addLeaderboardEntry
     };
 
