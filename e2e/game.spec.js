@@ -158,3 +158,30 @@ test('records saved by another tab are kept', async ({ context }) => {
     await expect(page.locator('#leaderboardScreen')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('#leaderboardEntries .entry')).toHaveCount(2);
 });
+
+test.describe('service worker', () => {
+    test.use({ serviceWorkers: 'allow' });
+
+    test('serves the app offline from a single cache version', async ({ page, context }) => {
+        await page.goto('/');
+        await page.evaluate(() => navigator.serviceWorker.ready);
+        // wait until the worker controls the page (clients.claim after activation)
+        await page.waitForFunction(() => navigator.serviceWorker.controller);
+
+        const cached = await page.evaluate(async () => {
+            const keys = await caches.keys();
+            const cache = await caches.open(keys[0]);
+            return { keys, urls: (await cache.keys()).map(r => new URL(r.url).pathname).sort() };
+        });
+        expect(cached.keys).toEqual(['summing-v2']);
+        expect(cached.urls).toEqual(
+            ['/', '/game.js', '/icon.svg', '/index.html', '/logic.js', '/manifest.webmanifest', '/styles.css']
+        );
+
+        await context.setOffline(true);
+        await page.reload();
+        await expect(page.locator('.cell')).toHaveCount(81);
+        await page.locator('.cell.empty').first().click();
+        await expect(page.locator('#moves')).toHaveText('1');
+    });
+});
