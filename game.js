@@ -19,7 +19,8 @@ const TEXT = {
     win: '승리',
     end: '종료',
     moves: '이동',
-    confirmNewGame: '진행 중인 게임을 버리고 새 게임을 시작할까요?'
+    confirmNewGame: '진행 중인 게임을 버리고 새 게임을 시작할까요?',
+    undone: left => `되돌렸습니다. 남은 횟수 ${left}회. `
 };
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -88,6 +89,7 @@ class SummingGame {
         this.undoState = null;
         this.undosLeft = UNDO_LIMIT;
         this.pendingDigit = null;
+        this.statusPrefix = '';
         this.leaderboard = new LeaderboardManager();
 
         this.initElements();
@@ -118,11 +120,14 @@ class SummingGame {
         this.continueBtn = document.getElementById('continueBtn');
         this.restartBtn = document.getElementById('restartBtn');
         this.recordsBtn = document.getElementById('recordsBtn');
+        this.undoBtn = document.getElementById('undoBtn');
+        this.undoCountElement = document.getElementById('undoCount');
 
         this.newGameBtn.addEventListener('click', () => this.startNewGame());
         this.continueBtn.addEventListener('click', () => this.showGameScreen());
         this.restartBtn.addEventListener('click', () => this.confirmNewGame());
         this.recordsBtn.addEventListener('click', () => this.showResult());
+        this.undoBtn.addEventListener('click', () => this.undoMove());
     }
 
     // Build the 81 cells once; render() only updates them. One delegated listener handles input.
@@ -300,6 +305,7 @@ class SummingGame {
         this.pendingDigit = restored.pendingDigit;
         this.undoState = null;
         this.undosLeft -= 1;
+        this.statusPrefix = TEXT.undone(this.undosLeft);
         this.render();
         this.saveGameState();
     }
@@ -421,11 +427,20 @@ class SummingGame {
 
         // Announce once per move: skip the intermediate render that shows the pre-clear board.
         if (displayBoard === this.board) {
-            const status = `점수 ${this.score}, 이동 ${this.moves}, 남은 타일 ${remaining}개. ` +
+            const status = this.statusPrefix + `점수 ${this.score}, 이동 ${this.moves}, 남은 타일 ${remaining}개. ` +
                 `${this.stream[0]}을(를) 놓으세요.`;
+            this.statusPrefix = '';
             if (this.statusElement.textContent !== status) {
                 this.statusElement.textContent = status;
             }
+        }
+
+        const undoAvailable = this.canUndo();
+        if (this.undoBtn.disabled === undoAvailable) {
+            this.undoBtn.disabled = !undoAvailable;
+        }
+        if (this.undoCountElement.textContent !== String(this.undosLeft)) {
+            this.undoCountElement.textContent = this.undosLeft;
         }
     }
 
