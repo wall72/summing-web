@@ -185,3 +185,30 @@ test.describe('service worker', () => {
         await expect(page.locator('#moves')).toHaveText('1');
     });
 });
+
+test('a move leaves clean cells and announces the status once', async ({ page }) => {
+    const board = Array.from({ length: 9 }, () => Array(9).fill(null));
+    board[4][4] = 3;
+    board[4][5] = 4;
+    board[0][0] = 9;
+    await seed(page, 'currentGame', savedGame({ board, stream: [7, 1, 2, 3, 4] }));
+    await page.goto('/');
+
+    await page.evaluate(() => {
+        window.statusMutations = 0;
+        new MutationObserver(records => { window.statusMutations += records.length; })
+            .observe(document.getElementById('status'), { childList: true, characterData: true, subtree: true });
+    });
+
+    await page.locator('.cell').nth(5 * 9 + 4).click();
+    await expect(page.locator('#remaining')).toHaveText('1');
+    await expect(page.locator('.cell[aria-disabled="true"].empty')).toHaveCount(0);
+
+    await expect(page.locator('.cell.new-tile, .cell.matched, .cell.removing')).toHaveCount(0);
+    await expect(page.locator('.cell').nth(5 * 9 + 4)).toHaveAttribute('aria-label', '6행 5열, 빈 칸');
+    await expect(page.locator('.cell').nth(5 * 9 + 4)).toHaveText('');
+    await expect(page.locator('.cell').nth(0)).toHaveAttribute('aria-label', '1행 1열, 숫자 9');
+    await expect(page.locator('.stream-num')).toHaveCount(5);
+    await expect(page.locator('.stream-num.current')).toHaveText('1');
+    expect(await page.evaluate(() => window.statusMutations)).toBe(1);
+});

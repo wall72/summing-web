@@ -124,6 +124,15 @@ class SummingGame {
     // Build the 81 cells once; render() only updates them. One delegated listener handles input.
     buildBoard() {
         this.cells = [];
+        // What each cell currently shows, so render() only touches cells that changed.
+        this.shown = Array.from({ length: BOARD_SIZE * BOARD_SIZE }, () => ({ value: undefined, locked: undefined }));
+        this.animatedCells = [];
+        this.streamSpans = Array.from({ length: STREAM_LENGTH }, (_, i) => {
+            const span = document.createElement('span');
+            span.className = i === 0 ? 'stream-num current' : 'stream-num';
+            return span;
+        });
+        this.streamNumbersElement.replaceChildren(...this.streamSpans);
         for (let row = 0; row < BOARD_SIZE; row++) {
             for (let col = 0; col < BOARD_SIZE; col++) {
                 const cell = document.createElement('button');
@@ -223,19 +232,19 @@ class SummingGame {
         this.saveGameState();
 
         this.render(boardBeforeClear);
-        this.getCellElement(row, col).classList.add('new-tile');
+        this.animate([[row, col]], 'new-tile');
 
         if (matchedCells) {
             await delay(PLACE_DELAY_MS);
             if (generation !== this.generation) {
                 return;
             }
-            matchedCells.forEach(([r, c]) => this.getCellElement(r, c).classList.add('matched'));
+            this.animate(matchedCells, 'matched');
             await delay(MATCH_DELAY_MS);
             if (generation !== this.generation) {
                 return;
             }
-            matchedCells.forEach(([r, c]) => this.getCellElement(r, c).classList.add('removing'));
+            this.animate(matchedCells, 'removing');
             await delay(REMOVE_DELAY_MS);
             if (generation !== this.generation) {
                 return;
@@ -251,6 +260,14 @@ class SummingGame {
                 this.showResult();
             }
         }
+    }
+
+    animate(positions, className) {
+        positions.forEach(([r, c]) => {
+            const cell = this.getCellElement(r, c);
+            cell.classList.add(className);
+            this.animatedCells.push(cell);
+        });
     }
 
     getCellElement(row, col) {
@@ -322,39 +339,51 @@ class SummingGame {
     render(displayBoard = this.board) {
         const locked = this.isResolvingMove || this.gameStatus !== 'playing';
 
+        this.animatedCells.forEach(cell => cell.classList.remove('new-tile', 'matched', 'removing'));
+        this.animatedCells.length = 0;
+
         this.cells.forEach((cell, index) => {
             const row = Math.floor(index / BOARD_SIZE);
             const col = index % BOARD_SIZE;
             const value = displayBoard[row][col];
-            const filled = value !== null;
+            const shown = this.shown[index];
+            if (shown.value === value && shown.locked === locked) {
+                return;
+            }
 
-            cell.className = `cell ${filled ? 'filled' : 'empty'}`;
-            cell.textContent = filled ? value : '';
-            cell.tabIndex = filled ? -1 : 0;
+            const filled = value !== null;
+            if (shown.value !== value) {
+                cell.className = `cell ${filled ? 'filled' : 'empty'}`;
+                cell.textContent = filled ? value : '';
+                cell.tabIndex = filled ? -1 : 0;
+                cell.setAttribute('aria-label',
+                    `${row + 1}행 ${col + 1}열, ${filled ? `숫자 ${value}` : '빈 칸'}`);
+            }
             cell.setAttribute('aria-disabled', String(filled || locked));
-            cell.setAttribute('aria-label',
-                `${row + 1}행 ${col + 1}열, ${filled ? `숫자 ${value}` : '빈 칸'}`);
+            shown.value = value;
+            shown.locked = locked;
         });
 
-        this.streamNumbersElement.replaceChildren(
-            ...this.stream.map((value, i) => {
-                const span = document.createElement('span');
-                span.className = i === 0 ? 'stream-num current' : 'stream-num';
-                span.textContent = value;
-                return span;
-            })
-        );
+        this.stream.forEach((value, i) => {
+            if (this.streamSpans[i].textContent !== String(value)) {
+                this.streamSpans[i].textContent = value;
+            }
+        });
 
+        const remaining = countFilled(this.board);
         this.scoreElement.textContent = this.score;
         this.movesElement.textContent = this.moves;
-        this.remainingElement.textContent = countFilled(this.board);
+        this.remainingElement.textContent = remaining;
         const [topEntry] = this.leaderboard.getTopEntries(1);
         this.bestElement.textContent = Math.max(this.score, topEntry ? topEntry.score : 0);
 
-        if (this.statusElement) {
-            this.statusElement.textContent =
-                `점수 ${this.score}, 이동 ${this.moves}, 남은 타일 ${countFilled(this.board)}개. ` +
+        // Announce once per move: skip the intermediate render that shows the pre-clear board.
+        if (displayBoard === this.board) {
+            const status = `점수 ${this.score}, 이동 ${this.moves}, 남은 타일 ${remaining}개. ` +
                 `${this.stream[0]}을(를) 놓으세요.`;
+            if (this.statusElement.textContent !== status) {
+                this.statusElement.textContent = status;
+            }
         }
     }
 
