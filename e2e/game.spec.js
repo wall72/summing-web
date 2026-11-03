@@ -243,6 +243,15 @@ test('undoMove restores the board, stream, score and moves of the last move', as
 });
 
 test('a replayed move appends the same digit, and undo state survives a reload', async ({ page }) => {
+    // every random draw yields a different digit, so a re-roll would always be detected
+    await page.addInitScript(() => {
+        // the counter lives in sessionStorage so it keeps counting across the reload below
+        Math.random = () => {
+            const calls = Number(sessionStorage.getItem('randomCalls') || 0);
+            sessionStorage.setItem('randomCalls', calls + 1);
+            return ((calls % 10) + 0.5) / 10;
+        };
+    });
     await seed(page, 'currentGame', matchSeed());
     await page.goto('/');
 
@@ -293,4 +302,87 @@ test('corrupt undo fields do not discard the saved game', async ({ page }) => {
     await expect(page.locator('.cell.filled')).toHaveCount(3);
     expect(await page.evaluate(() => game.undosLeft)).toBe(3);
     expect(await page.evaluate(() => game.pendingDigit)).toBeNull();
+});
+
+test.describe('undo button', () => {
+    const undoBtn = page => page.locator('#undoBtn');
+    const quietSeed = () => {
+        const board = Array.from({ length: 9 }, () => Array(9).fill(null));
+        board[0][0] = 9;
+        // 5 placed in the far corner has no filled neighbour, so it never matches
+        return savedGame({ board, stream: [5, 5, 5, 5, 5] });
+    };
+
+    test('is disabled while animating, restores a cleared move and announces it', async ({ page }) => {
+        await seed(page, 'currentGame', matchSeed());
+        await page.goto('/');
+        await expect(undoBtn(page)).toBeDisabled();
+        await expect(page.locator('#undoCount')).toHaveText('3');
+
+        await page.locator('.cell').nth(5 * 9 + 4).click();
+        await expect(undoBtn(page)).toBeDisabled();
+        await expect(undoBtn(page)).toBeEnabled();
+        await expect(page.locator('#score')).toHaveText('30');
+
+        await undoBtn(page).click();
+        await expect(page.locator('#score')).toHaveText('0');
+        await expect(page.locator('#moves')).toHaveText('0');
+        await expect(page.locator('.cell.filled')).toHaveCount(3);
+        await expect(page.locator('.stream-num.current')).toHaveText('7');
+        await expect(page.locator('#undoCount')).toHaveText('2');
+        await expect(undoBtn(page)).toBeDisabled();
+        await expect(page.locator('#status')).toContainText('되돌렸습니다. 남은 횟수 2회');
+    });
+
+    test('allows three undos per game and a new game resets them', async ({ page }) => {
+        await seed(page, 'currentGame', quietSeed());
+        await page.goto('/');
+
+        for (const left of ['2', '1', '0']) {
+            await page.locator('.cell').nth(8 * 9 + 8).click();
+            await expect(undoBtn(page)).toBeEnabled();
+            await undoBtn(page).click();
+            await expect(page.locator('#undoCount')).toHaveText(left);
+            await expect(page.locator('#moves')).toHaveText('0');
+        }
+
+        await page.locator('.cell').nth(8 * 9 + 8).click();
+        await expect(page.locator('#moves')).toHaveText('1');
+        await expect(undoBtn(page)).toBeDisabled();
+
+        page.once('dialog', dialog => dialog.accept());
+        await page.locator('#restartBtn').click();
+        await expect(page.locator('#undoCount')).toHaveText('3');
+        await expect(undoBtn(page)).toBeDisabled();
+    });
+
+    test('stays available after a reload', async ({ page }) => {
+        await seed(page, 'currentGame', quietSeed());
+        await page.goto('/');
+        await page.locator('.cell').nth(8 * 9 + 8).click();
+        await expect(undoBtn(page)).toBeEnabled();
+
+        await page.reload();
+        await expect(undoBtn(page)).toBeEnabled();
+        await undoBtn(page).click();
+        await expect(page.locator('#moves')).toHaveText('0');
+        await expect(page.locator('.cell.filled')).toHaveCount(1);
+
+        // the remaining count and the pending digit are kept too
+        await page.reload();
+        await expect(page.locator('#undoCount')).toHaveText('2');
+        await expect(undoBtn(page)).toBeDisabled();
+    });
+
+    test('fits on screen with the other buttons', async ({ page }) => {
+        await page.goto('/');
+        const viewport = page.viewportSize();
+        for (const id of ['undoBtn', 'restartBtn', 'recordsBtn']) {
+            const box = await page.locator(`#${id}`).boundingBox();
+            expect(box.x).toBeGreaterThanOrEqual(0);
+            expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+            expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+            expect(box.height).toBeGreaterThanOrEqual(44);
+        }
+    });
 });
