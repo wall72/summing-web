@@ -234,3 +234,15 @@ test('normalizeEntries drops invalid items, defaults names, sorts and caps the l
     const many = Array.from({ length: 30 }, (_, i) => make(i));
     assert.equal(L.normalizeEntries(many).length, L.LEADERBOARD_LIMIT);
 });
+
+test('calcClearBonus: 적은 이동으로 클리어할수록 최종 점수가 높다', () => {
+    const finalScore = moves => (49 + moves) * L.POINTS_PER_TILE + L.calcClearBonus(moves, (49 + moves) * L.POINTS_PER_TILE);
+    assert.ok(finalScore(30) > finalScore(40));
+    assert.ok(finalScore(40) > finalScore(60));
+    assert.equal(finalScore(30), 3000 - 30 * 20);
+});
+
+test('calcClearBonus: 바닥값과 음수 보너스 방지', () => {
+    assert.equal(L.calcClearBonus(500, 5000), 0);
+    assert.equal(L.calcClearBonus(500, 100) + 100, L.CLEAR_MIN_SCORE);
+});

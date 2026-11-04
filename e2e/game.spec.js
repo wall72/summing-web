@@ -78,7 +78,7 @@ test('clearing the board asks for a name and records the score under it', async 
     await page.locator('.cell').nth(5 * 9 + 4).click();
     await expect(page.locator('#leaderboardScreen')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('#resultTitle')).toHaveText('클리어!');
-    await expect(page.locator('#finalScore')).toHaveText('530');
+    await expect(page.locator('#finalScore')).toHaveText('2980');
     // nothing is recorded until the player answers
     await expect(page.locator('#nameForm')).toBeVisible();
     await expect(page.locator('#playerName')).toBeFocused();
@@ -307,7 +307,7 @@ test('undo is unavailable after the game ends and for animating moves', async ({
     await expect(page.locator('#leaderboardScreen')).toBeVisible({ timeout: 5000 });
     expect(await page.evaluate(() => game.canUndo())).toBe(false);
     await page.evaluate(() => game.undoMove());
-    await expect(page.locator('#finalScore')).toHaveText('530');
+    await expect(page.locator('#finalScore')).toHaveText('2980');
 });
 
 test('a save without undo fields still restores with the full undo allowance', async ({ page }) => {
@@ -498,7 +498,7 @@ test('a game abandoned before entering a name is recorded anonymously on this de
 
     const records = await page.evaluate(() => JSON.parse(localStorage.getItem('leaderboard')));
     expect(records).toHaveLength(1);
-    expect(records[0]).toMatchObject({ name: '익명', score: 530, status: 'cleared' });
+    expect(records[0]).toMatchObject({ name: '익명', score: 2980, status: 'cleared' });
 });
 
 test('a saved name is remembered for the next result', async ({ page }) => {
@@ -552,12 +552,12 @@ test.describe('server leaderboard', () => {
                 submissions.push({ body, contentType: request.headers()['content-type'] });
                 return route.fulfill({
                     headers: cors, contentType: 'application/json',
-                    body: JSON.stringify({ ok: true, entries: [serverEntry('다른사람', 900), serverEntry(body.name, body.score)] })
+                    body: JSON.stringify({ ok: true, entries: [serverEntry('다른사람', 3500), serverEntry(body.name, body.score)] })
                 });
             }
             return route.fulfill({
                 headers: cors, contentType: 'application/json',
-                body: JSON.stringify({ ok: true, entries: [serverEntry('다른사람', 900)] })
+                body: JSON.stringify({ ok: true, entries: [serverEntry('다른사람', 3500)] })
             });
         });
         await seed(page, 'currentGame', clearSeed());
@@ -576,7 +576,7 @@ test.describe('server leaderboard', () => {
 
         expect(submissions).toHaveLength(1);
         expect(submissions[0].body).toEqual({
-            action: 'submit', name: '민수', score: 530, moves: 1, remaining: 0, status: 'cleared'
+            action: 'submit', name: '민수', score: 2980, moves: 1, remaining: 0, status: 'cleared'
         });
         // text/plain keeps the request "simple", so the browser sends no CORS preflight
         expect(submissions[0].contentType).toContain('text/plain');

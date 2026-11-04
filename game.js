@@ -1,5 +1,5 @@
 const {
-    BOARD_SIZE, STREAM_LENGTH, POINTS_PER_TILE, CLEAR_BONUS,
+    BOARD_SIZE, STREAM_LENGTH, POINTS_PER_TILE, calcClearBonus,
     createBoard, createStream, randomDigit, findMatch, countFilled, getStatus,
     UNDO_LIMIT, isValidSavedGame, createUndoSnapshot, restoreUndoSnapshot, readSavedUndo,
     HINT_LIMIT, findHint, readSavedHints,
@@ -329,7 +329,7 @@ class SummingGame {
 
         this.gameStatus = getStatus(this.board);
         if (this.gameStatus === 'cleared') {
-            this.score += CLEAR_BONUS;
+            this.score += calcClearBonus(this.moves, this.score);
         }
         // A finished game cannot be undone. Its record is added once the player enters a name (submitScore).
         this.undoState = this.gameStatus === 'playing' ? snapshot : null;

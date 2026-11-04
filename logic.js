@@ -6,7 +6,9 @@
     const PLAYER_NAME_MAX = 12;
     const DEFAULT_PLAYER_NAME = '익명';
     const POINTS_PER_TILE = 10;
-    const CLEAR_BONUS = 500;
+    const CLEAR_BASE_SCORE = 3000;
+    const CLEAR_MOVE_PENALTY = 20;
+    const CLEAR_MIN_SCORE = 1000;
     const UNDO_LIMIT = 3;
     const HINT_LIMIT = 3;
 
@@ -198,6 +200,12 @@
             .sort(compareEntries).slice(0, LEADERBOARD_LIMIT);
     }
 
+    // 클리어 시 최종 점수는 이동 수가 적을수록 높다 (이동당 -20 이 타일 점수 +10 을 상쇄).
+    function calcClearBonus(moves, tileScore) {
+        const finalScore = Math.max(CLEAR_MIN_SCORE, CLEAR_BASE_SCORE - moves * CLEAR_MOVE_PENALTY);
+        return Math.max(0, finalScore - tileScore);
+    }
+
     function compareEntries(a, b) {
         return (b.score - a.score) || (a.moves - b.moves) || (b.timestamp - a.timestamp);
     }
@@ -207,7 +215,8 @@
     }
 
     const api = {
-        BOARD_SIZE, INITIAL_GRID_SIZE, STREAM_LENGTH, LEADERBOARD_LIMIT, POINTS_PER_TILE, CLEAR_BONUS, UNDO_LIMIT, HINT_LIMIT,
+        BOARD_SIZE, INITIAL_GRID_SIZE, STREAM_LENGTH, LEADERBOARD_LIMIT, POINTS_PER_TILE, CLEAR_BASE_SCORE, CLEAR_MOVE_PENALTY, CLEAR_MIN_SCORE, UNDO_LIMIT, HINT_LIMIT,
+        calcClearBonus,
         findHint, readSavedHints,
         createEmptyBoard, createBoard, createStream, randomDigit, getNeighbours, findMatch,
         countFilled, getStatus, isValidSavedGame, createUndoSnapshot, restoreUndoSnapshot, isValidUndoSnapshot, readSavedUndo,
