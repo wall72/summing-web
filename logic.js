@@ -3,6 +3,8 @@
     const INITIAL_GRID_SIZE = 7;
     const STREAM_LENGTH = 5;
     const LEADERBOARD_LIMIT = 20;
+    const PLAYER_NAME_MAX = 12;
+    const DEFAULT_PLAYER_NAME = '익명';
     const POINTS_PER_TILE = 10;
     const CLEAR_BONUS = 500;
     const UNDO_LIMIT = 3;
@@ -164,12 +166,36 @@
             ? saved.hintsLeft : HINT_LIMIT;
     }
 
+    // Strips control characters, collapses whitespace and caps the length. May return ''.
+    function sanitizePlayerName(raw) {
+        if (typeof raw !== 'string') {
+            return '';
+        }
+        return raw.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim()
+            .slice(0, PLAYER_NAME_MAX).trim();
+    }
+
+    // `name` is optional so records saved before names existed stay valid.
     function isValidLeaderboardEntry(entry) {
         return Boolean(entry) && typeof entry === 'object'
             && [entry.score, entry.moves, entry.remaining, entry.timestamp].every(Number.isFinite)
             && (entry.status === 'cleared' || entry.status === 'gameover')
+            && (entry.name === undefined || typeof entry.name === 'string')
             && typeof entry.date === 'string'
             && Number.isFinite(Date.parse(entry.date));
+    }
+
+    function withPlayerName(entry) {
+        return { ...entry, name: sanitizePlayerName(entry.name) || DEFAULT_PLAYER_NAME };
+    }
+
+    // Validates and orders a list received from the server (or storage): invalid items are dropped.
+    function normalizeEntries(list) {
+        if (!Array.isArray(list)) {
+            return [];
+        }
+        return list.filter(isValidLeaderboardEntry).map(withPlayerName)
+            .sort(compareEntries).slice(0, LEADERBOARD_LIMIT);
     }
 
     function compareEntries(a, b) {
@@ -185,6 +211,7 @@
         findHint, readSavedHints,
         createEmptyBoard, createBoard, createStream, randomDigit, getNeighbours, findMatch,
         countFilled, getStatus, isValidSavedGame, createUndoSnapshot, restoreUndoSnapshot, isValidUndoSnapshot, readSavedUndo,
+        PLAYER_NAME_MAX, DEFAULT_PLAYER_NAME, sanitizePlayerName, normalizeEntries,
         isValidLeaderboardEntry, compareEntries, addLeaderboardEntry
     };
 

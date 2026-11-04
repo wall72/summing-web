@@ -56,9 +56,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Collect site files
+        env:
+          # Optional repository variable (Settings > Variables > Actions): the Apps Script web app URL.
+          LEADERBOARD_API_URL: ${{ vars.LEADERBOARD_API_URL }}
         run: |
           mkdir _site
-          cp index.html styles.css logic.js game.js sw.js manifest.webmanifest icon.svg _site/
+          cp index.html styles.css config.js logic.js game.js sw.js manifest.webmanifest icon.svg _site/
+          if [ -n "$LEADERBOARD_API_URL" ]; then
+            node -e "require('fs').writeFileSync('_site/config.js', 'window.SUMMING_CONFIG = ' + JSON.stringify({ leaderboardApiUrl: process.env.LEADERBOARD_API_URL }) + ';\n')"
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -87,10 +87,19 @@
                         <span id="finalRemaining" class="result-value">0</span>
                     </div>
                 </div>
+                <form id="nameForm" class="name-form hidden">
+                    <label for="playerName">이름을 입력해 기록을 저장하세요</label>
+                    <input id="playerName" type="text" maxlength="12" autocomplete="nickname" placeholder="이름 (최대 12자)">
+                    <div class="name-actions">
+                        <button type="submit" class="btn btn-primary">기록 저장</button>
+                        <button id="skipScoreBtn" type="button" class="btn btn-secondary">익명으로 저장</button>
+                    </div>
+                </form>
             </div>
 
             <div class="leaderboard-list">
                 <h3>상위 기록</h3>
+                <p id="leaderboardStatus" class="leaderboard-status" aria-live="polite"></p>
                 <div id="leaderboardEntries" class="entries"></div>
             </div>
 
@@ -101,6 +110,7 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
     <script src="logic.js"></script>
     <script src="game.js"></script>
 </body>

@@ -204,3 +204,33 @@ test('readSavedHints falls back to the full allowance for old or corrupt saves',
     assert.equal(L.readSavedHints({ hintsLeft: 1.5 }), 3);
     assert.equal(L.readSavedHints({ hintsLeft: '1' }), 3);
 });
+
+test('sanitizePlayerName trims, collapses whitespace, strips control characters and caps the length', () => {
+    assert.equal(L.sanitizePlayerName('  홍  길동  '), '홍 길동');
+    assert.equal(L.sanitizePlayerName('a\u0000b\nc'), 'a b c');
+    assert.equal(L.sanitizePlayerName('x'.repeat(30)), 'x'.repeat(L.PLAYER_NAME_MAX));
+    assert.equal(L.sanitizePlayerName('   '), '');
+    assert.equal(L.sanitizePlayerName(42), '');
+    assert.equal(L.sanitizePlayerName(undefined), '');
+});
+
+test('leaderboard entries accept a missing name but reject a non-string name', () => {
+    const base = { score: 1, moves: 1, remaining: 0, status: 'cleared', date: new Date().toISOString(), timestamp: 1 };
+    assert.ok(L.isValidLeaderboardEntry(base));
+    assert.ok(L.isValidLeaderboardEntry({ ...base, name: '민수' }));
+    assert.ok(!L.isValidLeaderboardEntry({ ...base, name: 5 }));
+});
+
+test('normalizeEntries drops invalid items, defaults names, sorts and caps the list', () => {
+    const date = new Date().toISOString();
+    const make = (score, extra = {}) => ({ score, moves: 1, remaining: 0, status: 'cleared', date, timestamp: score, ...extra });
+    const list = [make(10), make(30, { name: '  가나다  ' }), { nonsense: true }, make(20, { name: '<b>x</b>' })];
+    const result = L.normalizeEntries(list);
+    assert.deepEqual(result.map(e => e.score), [30, 20, 10]);
+    assert.deepEqual(result.map(e => e.name), ['가나다', '<b>x</b>', L.DEFAULT_PLAYER_NAME]);
+    assert.deepEqual(L.normalizeEntries('nope'), []);
+    assert.deepEqual(L.normalizeEntries(null), []);
+
+    const many = Array.from({ length: 30 }, (_, i) => make(i));
+    assert.equal(L.normalizeEntries(many).length, L.LEADERBOARD_LIMIT);
+});

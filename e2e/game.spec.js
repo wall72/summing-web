@@ -63,7 +63,7 @@ test('a matching placement clears tiles and scores 10 per tile', async ({ page }
     await expect(page.locator('.cell.filled')).toHaveCount(1);
 });
 
-test('clearing the board shows the result screen and records the score', async ({ page }) => {
+test('clearing the board asks for a name and records the score under it', async ({ page }) => {
     const board = Array.from({ length: 9 }, () => Array(9).fill(null));
     board[4][4] = 3;
     board[4][5] = 4;
@@ -74,12 +74,28 @@ test('clearing the board shows the result screen and records the score', async (
     await expect(page.locator('#leaderboardScreen')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('#resultTitle')).toHaveText('클리어!');
     await expect(page.locator('#finalScore')).toHaveText('530');
-    await expect(page.locator('#leaderboardEntries .entry')).toHaveCount(1);
+    // nothing is recorded until the player answers
+    await expect(page.locator('#nameForm')).toBeVisible();
+    await expect(page.locator('#playerName')).toBeFocused();
+    await expect(page.locator('#leaderboardEntries .entry')).toHaveCount(0);
 
-    // a finished game reopens on its result screen
+    // the unanswered form comes back after a reload
     await page.reload();
     await expect(page.locator('#leaderboardScreen')).toBeVisible();
+    await expect(page.locator('#nameForm')).toBeVisible();
     await expect(page.locator('#continueBtn')).toBeHidden();
+
+    await page.locator('#playerName').fill('  민수  ');
+    await page.locator('#nameForm button[type="submit"]').click();
+    await expect(page.locator('#nameForm')).toBeHidden();
+    await expect(page.locator('#leaderboardEntries .entry')).toHaveCount(1);
+    await expect(page.locator('#leaderboardEntries .entry-name')).toHaveText('민수');
+
+    // once answered, a reload shows the result without the form
+    await page.reload();
+    await expect(page.locator('#leaderboardScreen')).toBeVisible();
+    await expect(page.locator('#nameForm')).toBeHidden();
+    await expect(page.locator('#leaderboardEntries .entry')).toHaveCount(1);
 
     await page.locator('#newGameBtn').click();
     await expect(page.locator('#gameScreen')).toBeVisible();
@@ -156,7 +172,9 @@ test('records saved by another tab are kept', async ({ context }) => {
 
     await page.locator('.cell').nth(5 * 9 + 4).click();
     await expect(page.locator('#leaderboardScreen')).toBeVisible({ timeout: 5000 });
+    await page.locator('#skipScoreBtn').click();
     await expect(page.locator('#leaderboardEntries .entry')).toHaveCount(2);
+    await expect(page.locator('#leaderboardEntries .entry-name').nth(1)).toHaveText('익명');
 });
 
 test.describe('service worker', () => {
@@ -173,9 +191,9 @@ test.describe('service worker', () => {
             const cache = await caches.open(keys[0]);
             return { keys, urls: (await cache.keys()).map(r => new URL(r.url).pathname).sort() };
         });
-        expect(cached.keys).toEqual(['summing-v4']);
+        expect(cached.keys).toEqual(['summing-v5']);
         expect(cached.urls).toEqual(
-            ['/', '/game.js', '/icon.svg', '/index.html', '/logic.js', '/manifest.webmanifest', '/styles.css']
+            ['/', '/config.js', '/game.js', '/icon.svg', '/index.html', '/logic.js', '/manifest.webmanifest', '/styles.css']
         );
 
         await context.setOffline(true);
@@ -454,5 +472,142 @@ test.describe('hint button', () => {
         await page.goto('/');
         await expect(page.locator('.cell.filled')).toHaveCount(3);
         await expect(page.locator('#hintCount')).toHaveText('3');
+    });
+});
+
+const clearSeed = () => {
+    const board = Array.from({ length: 9 }, () => Array(9).fill(null));
+    board[4][4] = 3;
+    board[4][5] = 4;
+    return savedGame({ board, stream: [7, 1, 2, 3, 4] });
+};
+
+test('a game abandoned before entering a name is recorded anonymously on this device', async ({ page }) => {
+    await seed(page, 'currentGame', clearSeed());
+    await page.goto('/');
+    await page.locator('.cell').nth(5 * 9 + 4).click();
+    // wait for the move animation, but start a new game before the result screen appears
+    await page.waitForTimeout(1500);
+    await page.locator('#restartBtn').click();
+    await expect(page.locator('.cell.filled')).toHaveCount(49);
+
+    const records = await page.evaluate(() => JSON.parse(localStorage.getItem('leaderboard')));
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ name: '익명', score: 530, status: 'cleared' });
+});
+
+test('a saved name is remembered for the next result', async ({ page }) => {
+    await seed(page, 'currentGame', clearSeed());
+    await page.goto('/');
+    await page.locator('.cell').nth(5 * 9 + 4).click();
+    await expect(page.locator('#nameForm')).toBeVisible({ timeout: 5000 });
+    await page.locator('#playerName').fill('지은');
+    await page.locator('#playerName').press('Enter');
+    await expect(page.locator('#leaderboardEntries .entry-name')).toHaveText('지은');
+
+    await page.evaluate(() => {
+        game.board = Array.from({ length: 9 }, () => Array(9).fill(null));
+        game.board[4][4] = 3;
+        game.board[4][5] = 4;
+        game.stream = [7, 1, 2, 3, 4];
+    });
+    await page.locator('#newGameBtn').click();
+    await page.evaluate(() => {
+        game.board = Array.from({ length: 9 }, () => Array(9).fill(null));
+        game.board[4][4] = 3;
+        game.board[4][5] = 4;
+        game.stream = [7, 1, 2, 3, 4];
+        game.render();
+    });
+    await page.locator('.cell').nth(5 * 9 + 4).click();
+    await expect(page.locator('#nameForm')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#playerName')).toHaveValue('지은');
+});
+
+test.describe('server leaderboard', () => {
+    const API = 'https://leaderboard.test/exec';
+    const cors = { 'access-control-allow-origin': '*' };
+    const serverEntry = (name, score) => ({
+        name, score, moves: 5, remaining: 0, status: 'cleared', date: new Date().toISOString(), timestamp: score
+    });
+
+    test.beforeEach(async ({ page }) => {
+        await page.route('**/config.js', route => route.fulfill({
+            contentType: 'text/javascript',
+            body: `window.SUMMING_CONFIG = { leaderboardApiUrl: '${API}' };`
+        }));
+    });
+
+    test('shows server records and submits the name to the server', async ({ page }) => {
+        const submissions = [];
+        await page.route(`${API}**`, async route => {
+            const request = route.request();
+            if (request.method() === 'POST') {
+                const body = JSON.parse(request.postData());
+                submissions.push({ body, contentType: request.headers()['content-type'] });
+                return route.fulfill({
+                    headers: cors, contentType: 'application/json',
+                    body: JSON.stringify({ ok: true, entries: [serverEntry('다른사람', 900), serverEntry(body.name, body.score)] })
+                });
+            }
+            return route.fulfill({
+                headers: cors, contentType: 'application/json',
+                body: JSON.stringify({ ok: true, entries: [serverEntry('다른사람', 900)] })
+            });
+        });
+        await seed(page, 'currentGame', clearSeed());
+        await page.goto('/');
+
+        await page.locator('.cell').nth(5 * 9 + 4).click();
+        await expect(page.locator('#nameForm')).toBeVisible({ timeout: 5000 });
+        // records from the server are listed while the name is still being typed
+        await expect(page.locator('#leaderboardEntries .entry-name')).toHaveText(['다른사람']);
+
+        await page.locator('#playerName').fill('민수');
+        await page.locator('#nameForm button[type="submit"]').click();
+        await expect(page.locator('#leaderboardEntries .entry')).toHaveCount(2);
+        await expect(page.locator('#leaderboardEntries .entry-name')).toHaveText(['다른사람', '민수']);
+        await expect(page.locator('#leaderboardStatus')).toHaveText('기록을 저장했습니다.');
+
+        expect(submissions).toHaveLength(1);
+        expect(submissions[0].body).toEqual({
+            action: 'submit', name: '민수', score: 530, moves: 1, remaining: 0, status: 'cleared'
+        });
+        // text/plain keeps the request "simple", so the browser sends no CORS preflight
+        expect(submissions[0].contentType).toContain('text/plain');
+        // the record is also kept locally as a fallback
+        const local = await page.evaluate(() => JSON.parse(localStorage.getItem('leaderboard')));
+        expect(local).toHaveLength(1);
+        expect(local[0].name).toBe('민수');
+    });
+
+    test('falls back to this device when the server fails', async ({ page }) => {
+        await page.route(`${API}**`, route => route.abort());
+        await seed(page, 'currentGame', clearSeed());
+        await page.goto('/');
+
+        await page.locator('.cell').nth(5 * 9 + 4).click();
+        await expect(page.locator('#nameForm')).toBeVisible({ timeout: 5000 });
+        await expect(page.locator('#leaderboardStatus')).toContainText('이 기기의 기록을 표시합니다');
+
+        await page.locator('#playerName').fill('민수');
+        await page.locator('#nameForm button[type="submit"]').click();
+        await expect(page.locator('#leaderboardStatus')).toContainText('이 기기에만 기록했습니다');
+        await expect(page.locator('#leaderboardEntries .entry-name')).toHaveText(['민수']);
+
+        // the aborted requests are the expected failure here, so the browser's network errors are not test errors
+        const errors = test.info().errors;
+        errors.splice(0, errors.length, ...errors.filter(message => !message.startsWith('Failed to load resource')));
+    });
+
+    test('ignores malformed server responses', async ({ page }) => {
+        await page.route(`${API}**`, route => route.fulfill({
+            headers: cors, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'boom' })
+        }));
+        await seed(page, 'currentGame', clearSeed());
+        await page.goto('/');
+        await page.locator('.cell').nth(5 * 9 + 4).click();
+        await expect(page.locator('#leaderboardStatus')).toContainText('이 기기의 기록을 표시합니다', { timeout: 5000 });
+        await expect(page.locator('#leaderboardEntries .entries-empty')).toBeVisible();
     });
 });

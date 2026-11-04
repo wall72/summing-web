@@ -454,6 +454,17 @@ body {
     align-items: center;
 }
 
+.entry-name {
+    flex: 1;
+    min-width: 0;
+    margin-right: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    color: #333;
+}
+
 .entry-score {
     font-size: 1.2rem;
     font-weight: bold;
@@ -461,6 +472,49 @@ body {
 }
 
 .entry-info {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.name-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.name-form label {
+    color: #E91E63;
+    font-weight: 600;
+    text-align: center;
+}
+
+.name-form input {
+    padding: 12px 15px;
+    font-size: 1rem;
+    border: 2px solid #FFB6C9;
+    border-radius: 10px;
+}
+
+.name-form input:focus-visible {
+    outline: 3px solid #E91E63;
+    outline-offset: 1px;
+}
+
+.name-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.name-actions .btn {
+    flex: 1;
+    font-size: 1rem;
+}
+
+.leaderboard-status {
+    min-height: 1.2em;
+    margin-bottom: 10px;
+    text-align: center;
     font-size: 0.85rem;
     color: #6c757d;
 }
