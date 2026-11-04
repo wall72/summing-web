@@ -15,7 +15,7 @@ Summing Mobile: 9x9 숫자 배치 퍼즐 게임. 빌드 단계 없는 정적 HTM
 - `index.html` - 게임 화면(`#gameScreen`)과 결과/리더보드 화면(`#leaderboardScreen`)
 - `logic.js` - 순수 게임 로직(보드/스트림 생성, 매치, 종료 판정, 저장 데이터 검증, 되돌리기 스냅샷, 리더보드 정렬, 사용자명 정제). DOM/localStorage 사용 금지. 브라우저 전역 `SummingLogic` 및 Node `require` 둘 다 지원
 - `game.js` - `RemoteLeaderboard`(서버 fetch) + `LeaderboardManager` + `SummingGame`(DOM 렌더링, 입력, 애니메이션, 저장). 규칙 로직은 `logic.js` 에 추가
-- `config.js` - 배포 설정(`window.SUMMING_CONFIG.leaderboardApiUrl`). 현재 실제 Apps Script 웹 앱 URL 이 들어 있음(공개 URL, 비밀 아님). 비우면 서버 리더보드 비활성(로컬 전용). e2e 는 이 파일을 빈 URL 로 라우트해 실제 시트에 쓰지 않음. `index.html` 에서 `logic.js` 보다 먼저 로드
+- `config.js` - 배포 설정(`window.SUMMING_CONFIG.leaderboardApiUrl`). 저장소에는 URL 을 커밋하지 않고 비워 둠(포크/클론이 내 시트에 쓰지 못하게). 배포는 저장소 변수 `LEADERBOARD_API_URL` 로 주입, 로컬은 각자 수정(커밋 금지). 비우면 서버 리더보드 비활성(로컬 전용). e2e 는 이 파일을 빈 URL 로 라우트해 실제 시트에 쓰지 않음. `index.html` 에서 `logic.js` 보다 먼저 로드
 - `server/apps-script/` - 서버 리더보드 백엔드(`Code.gs`, 배포 방법 `README.md`). 정적 사이트에는 배포하지 않음(`SHELL`/`pages.yml` 복사 목록 제외). API 규격을 바꾸면 `game.js` 의 `RemoteLeaderboard` 와 e2e 모킹도 함께 수정
 - `sw.js`, `manifest.webmanifest`, `icon.svg` - PWA. 캐시 우선(버전 단위 일괄 캐시)이라 캐시 대상 파일을 바꾸면 `sw.js` 의 `CACHE` 버전을 반드시 올리고 `SHELL`, `pages.yml` 의 복사 목록도 함께 수정
 - `styles.css` - 반응형(세로/가로) 스타일, 타일 애니메이션 (모바일 터치 우선, 방향키 조작은 비목표)

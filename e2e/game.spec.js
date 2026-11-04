@@ -196,7 +196,7 @@ test.describe('service worker', () => {
             const cache = await caches.open(keys[0]);
             return { keys, urls: (await cache.keys()).map(r => new URL(r.url).pathname).sort() };
         });
-        expect(cached.keys).toEqual(['summing-v6']);
+        expect(cached.keys).toEqual(['summing-v7']);
         expect(cached.urls).toEqual(
             ['/', '/config.js', '/game.js', '/icon.svg', '/index.html', '/logic.js', '/manifest.webmanifest', '/styles.css']
         );
