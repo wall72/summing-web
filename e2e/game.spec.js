@@ -17,6 +17,11 @@ const seed = (page, key, value) =>
     }, [key, value]);
 
 test.beforeEach(async ({ page }) => {
+    // The shipped config.js points at the real leaderboard; tests must never read or write it.
+    await page.route('**/config.js', route => route.fulfill({
+        contentType: 'text/javascript',
+        body: "window.SUMMING_CONFIG = { leaderboardApiUrl: '' };"
+    }));
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', msg => msg.type() === 'error' && errors.push(msg.text()));
@@ -191,7 +196,7 @@ test.describe('service worker', () => {
             const cache = await caches.open(keys[0]);
             return { keys, urls: (await cache.keys()).map(r => new URL(r.url).pathname).sort() };
         });
-        expect(cached.keys).toEqual(['summing-v5']);
+        expect(cached.keys).toEqual(['summing-v6']);
         expect(cached.urls).toEqual(
             ['/', '/config.js', '/game.js', '/icon.svg', '/index.html', '/logic.js', '/manifest.webmanifest', '/styles.css']
         );
