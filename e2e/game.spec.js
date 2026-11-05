@@ -205,7 +205,7 @@ test.describe('service worker', () => {
             const cache = await caches.open(keys[0]);
             return { keys, urls: (await cache.keys()).map(r => new URL(r.url).pathname).sort() };
         });
-        expect(cached.keys).toEqual(['summing-v8']);
+        expect(cached.keys).toEqual(['summing-v9']);
         expect(cached.urls).toEqual(
             ['/', '/config.js', '/game.js', '/icon.svg', '/index.html', '/logic.js', '/manifest.webmanifest', '/styles.css']
         );
@@ -688,3 +688,22 @@ test('i18n: a saved or corrupt language falls back safely', async ({ page }) => 
     await page.goto('/');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });
+
+for (const width of [320, 375, 393]) {
+    for (const lang of ['en', 'ko']) {
+        test(`i18n: the four action buttons stay on one row (${lang}, ${width}px)`, async ({ page }) => {
+            await page.setViewportSize({ width, height: 800 });
+            await page.addInitScript(l => localStorage.setItem('language', JSON.stringify(l)), lang);
+            await page.goto('/');
+            const boxes = await page.locator('.game-actions .btn-small').evaluateAll(
+                els => els.map(el => {
+                    const r = el.getBoundingClientRect();
+                    return { y: Math.round(r.top), left: r.left, right: r.right, overflow: el.scrollWidth > el.clientWidth };
+                })
+            );
+            expect(boxes).toHaveLength(4);
+            expect(new Set(boxes.map(b => b.y)).size).toBe(1);
+            expect(boxes.every(b => !b.overflow && b.left >= 0 && b.right <= width)).toBe(true);
+        });
+    }
+}
