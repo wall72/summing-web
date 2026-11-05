@@ -727,7 +727,9 @@ body {
     min-width: 0;
     min-height: 44px;
     padding: 8px 4px;
-    white-space: nowrap;
+    /* Labels may wrap onto a second line on very narrow screens or wide fallback fonts; the row never overflows. */
+    line-height: 1.15;
+    overflow-wrap: anywhere;
     font-size: clamp(0.72rem, 3.4vw, 0.9rem);
     font-weight: 600;
     color: #c2185b;
