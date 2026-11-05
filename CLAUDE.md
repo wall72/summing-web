@@ -37,6 +37,7 @@ Summing Mobile: 9x9 숫자 배치 퍼즐 게임. 빌드 단계 없는 정적 HTM
 
 - `currentGame`: `board, stream, score, moves, gameStatus, savedAt`, 선택 필드 `undo`(직전 상태 스냅샷), `undosLeft`, `pendingDigit`, `hintsLeft`, `submitted`(종료된 게임의 이름 입력 완료 여부. 없으면 true 취급 = 구버전 저장은 이미 기록된 것으로 봄). `gameStatus === 'playing'` 일 때만 복원. JSON 손상 시 폐기 후 새 게임. 선택 필드가 없거나 손상되면 그 필드만 기본값(`undo` 없음, 3회, `pendingDigit` 없음)으로 되돌리고 게임은 유지(`readSavedUndo`; `hintsLeft` 는 `readSavedHints` 로 같은 방식, 기본 3회)
 - `leaderboard`: 최대 20개. `{name, score, moves, remaining, status, date, timestamp}` (`name` 은 선택: 없으면 '익명'). 정렬: 점수 높은 순 -> 이동 적은 순 -> 최신 순. 손상 시 폐기. 서버 사용 여부와 관계없이 항상 기록(오프라인 폴백)
+- `language`: `'en'`|`'ko'` (기본 `'en'`, 알 수 없는 값은 기본값). 헤더/기록 화면의 EN|KO 토글로 변경, `applyLanguage()` 가 화면 전체를 즉시 갱신. How to Play 는 `<dialog id="howToPlayDialog">` 팝업(헤더 버튼, 닫기/ESC/배경 클릭)
 - `playerName`: 마지막에 입력한 이름(다음 게임 입력란에 미리 채움)
 - 서버 리더보드: `config.js` 에 URL 이 있으면 결과 화면에서 서버 목록을 우선 표시(`remoteEntries`, 저장 안 함), 실패/10초 타임아웃 시 로컬 목록과 안내 문구. POST 는 `text/plain` 으로 보내 CORS preflight 를 피함
 
@@ -50,7 +51,7 @@ Summing Mobile: 9x9 숫자 배치 퍼즐 게임. 빌드 단계 없는 정적 HTM
 
 - 4칸 들여쓰기, 작은따옴표, 세미콜론 사용 (기존 스타일 유지)
 - 프레임워크/번들러 도입 금지 (비목표). 바닐라 JS 유지
-- UI 문구는 한국어. `index.html` 의 정적 문구와 `game.js` 의 `TEXT`/`aria-label` 에 있음. 파일은 UTF-8(BOM 없음)
+- UI 문구는 English/한국어 이중 언어, 기본값 English. 문구는 `game.js` 상단 `I18N`(`en`/`ko`, 두 언어의 키를 항상 함께 추가)에 있고, `index.html` 정적 요소는 `data-i18n`/`data-i18n-placeholder`/`data-i18n-aria` 로 연결. 동적 문구와 `aria-label` 은 `t(key, ...args)` 사용(한국어 하드코딩 금지). 파일은 UTF-8(BOM 없음)
 - 비목표: 계정, 자체 백엔드 서버, 점수 재현 검증, 멀티플레이, 오디오, 방향키 이동, 여러 수 되돌리기/다시 실행(redo)
 - `game.js` 의 애니메이션 상수는 `styles.css` 의 duration 과 맞출 것
 

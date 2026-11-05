@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,22 +16,31 @@
     <div id="gameScreen" class="screen">
         <div class="game-container">
             <header class="game-header">
-                <h1>Summing Mobile</h1>
+                <div class="header-top">
+                    <h1>Summing Mobile</h1>
+                    <div class="header-tools">
+                        <button type="button" class="btn-tool" data-action="howToPlay" data-i18n="howToPlay">How to Play</button>
+                        <div class="lang-toggle" role="group" data-i18n-aria="language">
+                            <button type="button" class="lang-btn" data-lang="en" aria-pressed="true">EN</button>
+                            <button type="button" class="lang-btn" data-lang="ko" aria-pressed="false">KO</button>
+                        </div>
+                    </div>
+                </div>
                 <div class="stats">
                     <div class="stat-item">
-                        <span class="stat-label">점수</span>
+                        <span class="stat-label" data-i18n="score">점수</span>
                         <span id="score" class="stat-value">0</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">이동</span>
+                        <span class="stat-label" data-i18n="moves">이동</span>
                         <span id="moves" class="stat-value">0</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">타일</span>
+                        <span class="stat-label" data-i18n="tiles">타일</span>
                         <span id="remaining" class="stat-value">49</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">최고</span>
+                        <span class="stat-label" data-i18n="best">최고</span>
                         <span id="best" class="stat-value">0</span>
                     </div>
                 </div>
@@ -41,7 +50,7 @@
 
             <div class="game-content">
                 <div class="stream-horizontal">
-                    <div class="stream-label">다음 숫자</div>
+                    <div class="stream-label" data-i18n="nextNumber">다음 숫자</div>
                     <div class="stream-numbers" id="streamNumbers">
                         <span class="stream-num current">5</span>
                         <span class="stream-num">3</span>
@@ -56,10 +65,10 @@
                 </div>
 
                 <div class="game-actions">
-                    <button id="undoBtn" type="button" class="btn-small" disabled>되돌리기 (<span id="undoCount">3</span>)</button>
-                    <button id="hintBtn" type="button" class="btn-small">힌트 (<span id="hintCount">3</span>)</button>
-                    <button id="restartBtn" type="button" class="btn-small">새 게임</button>
-                    <button id="recordsBtn" type="button" class="btn-small">기록 보기</button>
+                    <button id="undoBtn" type="button" class="btn-small" disabled><span data-i18n="undo">되돌리기</span> (<span id="undoCount">3</span>)</button>
+                    <button id="hintBtn" type="button" class="btn-small"><span data-i18n="hint">힌트</span> (<span id="hintCount">3</span>)</button>
+                    <button id="restartBtn" type="button" class="btn-small" data-i18n="newGame">새 게임</button>
+                    <button id="recordsBtn" type="button" class="btn-small" data-i18n="records">기록 보기</button>
                 </div>
             </div>
         </div>
@@ -68,47 +77,70 @@
     <div id="leaderboardScreen" class="screen hidden">
         <div class="leaderboard-container">
             <header class="leaderboard-header">
-                <h1>리더보드</h1>
+                <div class="header-top">
+                    <h1 data-i18n="leaderboard">리더보드</h1>
+                    <div class="header-tools">
+                        <button type="button" class="btn-tool" data-action="howToPlay" data-i18n="howToPlay">How to Play</button>
+                        <div class="lang-toggle" role="group" data-i18n-aria="language">
+                            <button type="button" class="lang-btn" data-lang="en" aria-pressed="true">EN</button>
+                            <button type="button" class="lang-btn" data-lang="ko" aria-pressed="false">KO</button>
+                        </div>
+                    </div>
+                </div>
             </header>
 
             <div class="game-result" id="gameResult">
                 <h2 id="resultTitle">게임 종료</h2>
                 <div class="result-stats">
                     <div class="result-item">
-                        <span class="result-label">최종 점수</span>
+                        <span class="result-label" data-i18n="finalScore">최종 점수</span>
                         <span id="finalScore" class="result-value">0</span>
                     </div>
                     <div class="result-item">
-                        <span class="result-label">이동 수</span>
+                        <span class="result-label" data-i18n="moveCount">이동 수</span>
                         <span id="finalMoves" class="result-value">0</span>
                     </div>
                     <div class="result-item">
-                        <span class="result-label">남은 타일</span>
+                        <span class="result-label" data-i18n="tilesLeft">남은 타일</span>
                         <span id="finalRemaining" class="result-value">0</span>
                     </div>
                 </div>
                 <form id="nameForm" class="name-form hidden">
-                    <label for="playerName">이름을 입력해 기록을 저장하세요</label>
-                    <input id="playerName" type="text" maxlength="12" autocomplete="nickname" placeholder="이름 (최대 12자)">
+                    <label for="playerName" data-i18n="nameLabel">이름을 입력해 기록을 저장하세요</label>
+                    <input id="playerName" type="text" maxlength="12" autocomplete="nickname" data-i18n-placeholder="namePlaceholder" placeholder="이름 (최대 12자)">
                     <div class="name-actions">
-                        <button type="submit" class="btn btn-primary">기록 저장</button>
-                        <button id="skipScoreBtn" type="button" class="btn btn-secondary">익명으로 저장</button>
+                        <button type="submit" class="btn btn-primary" data-i18n="saveRecord">기록 저장</button>
+                        <button id="skipScoreBtn" type="button" class="btn btn-secondary" data-i18n="saveAnon">익명으로 저장</button>
                     </div>
                 </form>
             </div>
 
             <div class="leaderboard-list">
-                <h3>상위 기록</h3>
+                <h3 data-i18n="topRecords">상위 기록</h3>
                 <p id="leaderboardStatus" class="leaderboard-status" aria-live="polite"></p>
                 <div id="leaderboardEntries" class="entries"></div>
             </div>
 
             <div class="leaderboard-actions">
-                <button id="newGameBtn" class="btn btn-primary">새 게임</button>
-                <button id="continueBtn" class="btn btn-secondary hidden">계속하기</button>
+                <button id="newGameBtn" class="btn btn-primary" data-i18n="newGame">새 게임</button>
+                <button id="continueBtn" class="btn btn-secondary hidden" data-i18n="continue">계속하기</button>
             </div>
         </div>
     </div>
+
+    <dialog id="howToPlayDialog" class="modal" aria-labelledby="howToPlayTitle">
+        <div class="modal-body">
+            <h2 id="howToPlayTitle" data-i18n="howToPlay">How to Play</h2>
+            <ul class="how-list">
+                <li><strong data-i18n="htpBoardTitle"></strong> <span data-i18n="htpBoard"></span></li>
+                <li><strong data-i18n="htpQueueTitle"></strong> <span data-i18n="htpQueue"></span></li>
+                <li><strong data-i18n="htpMatchTitle"></strong> <span data-i18n="htpMatch"></span></li>
+                <li><strong data-i18n="htpGoalTitle"></strong> <span data-i18n="htpGoal"></span></li>
+                <li><strong data-i18n="htpScoreTitle"></strong> <span data-i18n="htpScore"></span></li>
+            </ul>
+            <button id="howToPlayClose" type="button" class="btn btn-primary" data-i18n="close">Close</button>
+        </div>
+    </dialog>
 
     <script src="config.js"></script>
     <script src="logic.js"></script>

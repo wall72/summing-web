@@ -22,6 +22,15 @@ test.beforeEach(async ({ page }) => {
         contentType: 'text/javascript',
         body: "window.SUMMING_CONFIG = { leaderboardApiUrl: '' };"
     }));
+    if (!test.info().title.startsWith('i18n:')) {
+        // The default language is English; the older tests assert the Korean texts.
+        await page.addInitScript(() => {
+            if (!sessionStorage.getItem('langSeeded')) {
+                localStorage.setItem('language', JSON.stringify('ko'));
+                sessionStorage.setItem('langSeeded', '1');
+            }
+        });
+    }
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', msg => msg.type() === 'error' && errors.push(msg.text()));
@@ -196,7 +205,7 @@ test.describe('service worker', () => {
             const cache = await caches.open(keys[0]);
             return { keys, urls: (await cache.keys()).map(r => new URL(r.url).pathname).sort() };
         });
-        expect(cached.keys).toEqual(['summing-v7']);
+        expect(cached.keys).toEqual(['summing-v8']);
         expect(cached.urls).toEqual(
             ['/', '/config.js', '/game.js', '/icon.svg', '/index.html', '/logic.js', '/manifest.webmanifest', '/styles.css']
         );
@@ -615,4 +624,67 @@ test.describe('server leaderboard', () => {
         await expect(page.locator('#leaderboardStatus')).toContainText('이 기기의 기록을 표시합니다', { timeout: 5000 });
         await expect(page.locator('#leaderboardEntries .entries-empty')).toBeVisible();
     });
+});
+
+test('i18n: defaults to English and switches every screen to Korean, persisting the choice', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page.locator('.stat-label').first()).toHaveText('Score');
+    await expect(page.locator('#restartBtn')).toHaveText('New Game');
+    await expect(page.locator('.cell').first()).toHaveAttribute('aria-label', 'Row 1, column 1, empty');
+    await expect(page.locator('.lang-btn[data-lang="en"]').first()).toHaveAttribute('aria-pressed', 'true');
+
+    await page.locator('.lang-btn[data-lang="ko"]').first().click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ko');
+    await expect(page.locator('.stat-label').first()).toHaveText('점수');
+    await expect(page.locator('#restartBtn')).toHaveText('새 게임');
+    await expect(page.locator('#undoBtn')).toContainText('되돌리기');
+    await expect(page.locator('.cell').first()).toHaveAttribute('aria-label', '1행 1열, 빈 칸');
+
+    await page.locator('#recordsBtn').click();
+    await expect(page.locator('#leaderboardScreen h1')).toHaveText('리더보드');
+    await expect(page.locator('#resultTitle')).toHaveText('진행 중');
+    await expect(page.locator('.entries-empty')).toHaveText('기록이 없습니다.');
+    await page.locator('#leaderboardScreen .lang-btn[data-lang="en"]').click();
+    await expect(page.locator('#resultTitle')).toHaveText('In Progress');
+    await expect(page.locator('.entries-empty')).toHaveText('No records yet.');
+    await page.locator('#leaderboardScreen .lang-btn[data-lang="ko"]').click();
+
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ko');
+    await expect(page.locator('#recordsBtn, #continueBtn').first()).toBeVisible();
+});
+
+test('i18n: How to Play opens as a popup in both languages and closes three ways', async ({ page }) => {
+    await page.goto('/');
+    const dialog = page.locator('#howToPlayDialog');
+    await expect(dialog).toBeHidden();
+
+    await page.locator('#gameScreen [data-action="howToPlay"]').click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator('h2')).toHaveText('How to Play');
+    await expect(dialog.locator('li')).toHaveCount(5);
+    await expect(dialog).toContainText('five-slot queue');
+
+    // translated while open
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await page.locator('#gameScreen .lang-btn[data-lang="ko"]').click();
+    await page.locator('#gameScreen [data-action="howToPlay"]').click();
+    await expect(dialog.locator('h2')).toHaveText('게임 방법');
+    await expect(dialog).toContainText('5칸짜리 대기열');
+
+    await page.locator('#howToPlayClose').click();
+    await expect(dialog).toBeHidden();
+
+    await page.locator('#gameScreen [data-action="howToPlay"]').click();
+    await expect(dialog).toBeVisible();
+    await page.mouse.click(2, 2); // backdrop
+    await expect(dialog).toBeHidden();
+});
+
+test('i18n: a saved or corrupt language falls back safely', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('language', JSON.stringify('fr')));
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });

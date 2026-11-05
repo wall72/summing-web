@@ -733,3 +733,117 @@ body {
     outline: 3px solid #667eea;
     outline-offset: 1px;
 }
+
+/* Header tools: How to Play button and EN/KO toggle */
+.header-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 8px;
+    margin-bottom: 10px;
+}
+
+.header-top h1 {
+    margin-bottom: 0;
+    text-align: left;
+}
+
+.header-tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.btn-tool,
+.lang-btn {
+    min-height: 32px;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #c2185b;
+    background: rgba(255, 255, 255, 0.85);
+    border: 2px solid #FF6B9D;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.btn-tool {
+    border-radius: 10px;
+}
+
+.lang-toggle {
+    display: flex;
+}
+
+.lang-btn:first-child {
+    border-radius: 10px 0 0 10px;
+}
+
+.lang-btn:last-child {
+    border-radius: 0 10px 10px 0;
+    border-left-width: 0;
+}
+
+.lang-btn[aria-pressed="true"] {
+    color: #fff;
+    background: #FF6B9D;
+}
+
+.btn-tool:focus-visible,
+.lang-btn:focus-visible {
+    outline: 3px solid #667eea;
+    outline-offset: 1px;
+}
+
+/* How to Play popup */
+.modal {
+    width: min(92vw, 420px);
+    max-height: 86vh;
+    margin: auto;
+    padding: 0;
+    border: none;
+    border-radius: 16px;
+    background: #fff8f0;
+    color: #4a2c2a;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+.modal::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 86vh;
+    padding: 18px;
+    overflow-y: auto;
+}
+
+.modal-body h2 {
+    font-size: 1.3rem;
+    color: #c2185b;
+}
+
+.how-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-left: 18px;
+    font-size: 0.95rem;
+    line-height: 1.45;
+}
+
+.how-list strong {
+    color: #c2185b;
+}
+
+.modal-body .btn {
+    align-self: stretch;
+}

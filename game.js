@@ -13,24 +13,124 @@ const REMOVE_DELAY_MS = 400;
 const RESULT_DELAY_MS = 1000;
 const REMOTE_TIMEOUT_MS = 10000;
 
-const TEXT = {
-    cleared: '클리어!',
-    gameOver: '게임 오버',
-    inProgress: '진행 중',
-    noRecords: '기록이 없습니다.',
-    win: '승리',
-    end: '종료',
-    moves: '이동',
-    confirmNewGame: '진행 중인 게임을 버리고 새 게임을 시작할까요?',
-    undone: left => `되돌렸습니다. 남은 횟수 ${left}회. `,
-    hintFound: (row, col, left) => `힌트: ${row + 1}행 ${col + 1}열에 놓으면 제거됩니다. 남은 힌트 ${left}회. `,
-    noHint: '지금은 매치되는 칸이 없습니다. ',
-    loading: '서버 기록을 불러오는 중…',
-    submitting: '기록을 저장하는 중…',
-    offline: '서버에 연결할 수 없어 이 기기의 기록을 표시합니다.',
-    saveFailed: '서버에 저장하지 못해 이 기기에만 기록했습니다.',
-    saved: '기록을 저장했습니다.'
+// UI strings. English is the default; the language is stored in localStorage ('language').
+// Static markup uses data-i18n / data-i18n-placeholder / data-i18n-aria with these keys.
+const I18N = {
+    en: {
+        score: 'Score',
+        moves: 'Moves',
+        tiles: 'Tiles',
+        best: 'Best',
+        nextNumber: 'Next number',
+        undo: 'Undo',
+        hint: 'Hint',
+        newGame: 'New Game',
+        records: 'Records',
+        leaderboard: 'Leaderboard',
+        finalScore: 'Final Score',
+        moveCount: 'Moves',
+        tilesLeft: 'Tiles Left',
+        nameLabel: 'Enter your name to save your record',
+        namePlaceholder: 'Name (max 12 characters)',
+        saveRecord: 'Save Record',
+        saveAnon: 'Save as Anonymous',
+        topRecords: 'Top Records',
+        continue: 'Continue',
+        close: 'Close',
+        language: 'Language',
+        howToPlay: 'How to Play',
+        htpBoardTitle: 'Board \u2014',
+        htpBoard: 'The board is 9\u00d79. At the start, the outer ring is empty and the inner 7\u00d77 is filled with random digits 0\u20139.',
+        htpQueueTitle: 'Queue \u2014',
+        htpQueue: 'You always place the digit shown in the first slot of the five-slot queue. After each placement the queue shifts and a new random digit appears in slot 5.',
+        htpMatchTitle: 'Match \u2014',
+        htpMatch: 'When the digit you place equals the sum of your eight neighbors\u2019 digits, modulo 10, that placement and all neighboring cells with digits are cleared. With no neighbors there is no match.',
+        htpGoalTitle: 'Goal \u2014',
+        htpGoal: 'Clear every cell to win. If the entire board becomes filled, you lose.',
+        htpScoreTitle: 'Score \u2014',
+        htpScore: 'Each cleared tile is worth 10 points, and clearing the whole board earns a bonus: the fewer moves you take, the higher your score. Undo and hints (3 each per game) never cost points.',
+        cleared: 'Cleared!',
+        gameOver: 'Game Over',
+        inProgress: 'In Progress',
+        noRecords: 'No records yet.',
+        win: 'Win',
+        end: 'End',
+        confirmNewGame: 'Discard the current game and start a new one?',
+        undone: left => `Undone. ${left} undo${left === 1 ? '' : 's'} left. `,
+        hintFound: (row, col, left) => `Hint: place it at row ${row + 1}, column ${col + 1} to clear tiles. ${left} hint${left === 1 ? '' : 's'} left. `,
+        noHint: 'No matching cell right now. ',
+        status: (score, moves, remaining, digit) =>
+            `Score ${score}, moves ${moves}, ${remaining} tiles left. Place ${digit}.`,
+        cellLabel: (row, col, value) =>
+            `Row ${row + 1}, column ${col + 1}, ${value === null ? 'empty' : `digit ${value}`}`,
+        loading: 'Loading server records\u2026',
+        submitting: 'Saving your record\u2026',
+        offline: 'Cannot reach the server. Showing records from this device.',
+        saveFailed: 'Could not save to the server. Saved on this device only.',
+        saved: 'Record saved.'
+    },
+    ko: {
+        score: '점수',
+        moves: '이동',
+        tiles: '타일',
+        best: '최고',
+        nextNumber: '다음 숫자',
+        undo: '되돌리기',
+        hint: '힌트',
+        newGame: '새 게임',
+        records: '기록 보기',
+        leaderboard: '리더보드',
+        finalScore: '최종 점수',
+        moveCount: '이동 수',
+        tilesLeft: '남은 타일',
+        nameLabel: '이름을 입력해 기록을 저장하세요',
+        namePlaceholder: '이름 (최대 12자)',
+        saveRecord: '기록 저장',
+        saveAnon: '익명으로 저장',
+        topRecords: '상위 기록',
+        continue: '계속하기',
+        close: '닫기',
+        language: '언어',
+        howToPlay: '게임 방법',
+        htpBoardTitle: '보드 \u2014',
+        htpBoard: '보드는 9\u00d79입니다. 시작할 때 바깥 테두리는 비어 있고, 안쪽 7\u00d77 칸에는 0\u20139의 랜덤 숫자가 채워져 있습니다.',
+        htpQueueTitle: '대기열 \u2014',
+        htpQueue: '5칸짜리 대기열의 첫 번째 칸에 있는 숫자를 놓습니다. 놓을 때마다 대기열이 한 칸씩 당겨지고 5번째 칸에 새 랜덤 숫자가 들어옵니다.',
+        htpMatchTitle: '매치 \u2014',
+        htpMatch: '놓은 숫자가 이웃한 8칸의 숫자 합을 10으로 나눈 나머지와 같으면, 놓은 타일과 숫자가 있는 이웃 칸이 모두 사라집니다. 이웃이 없으면 매치되지 않습니다.',
+        htpGoalTitle: '목표 \u2014',
+        htpGoal: '모든 칸을 비우면 승리합니다. 보드가 전부 가득 차면 패배합니다.',
+        htpScoreTitle: '점수 \u2014',
+        htpScore: '지운 타일 하나당 10점이며, 보드를 전부 비우면 보너스를 받습니다. 이동이 적을수록 점수가 높습니다. 되돌리기와 힌트(게임당 각 3회)는 점수에 영향을 주지 않습니다.',
+        cleared: '클리어!',
+        gameOver: '게임 오버',
+        inProgress: '진행 중',
+        noRecords: '기록이 없습니다.',
+        win: '승리',
+        end: '종료',
+        confirmNewGame: '진행 중인 게임을 버리고 새 게임을 시작할까요?',
+        undone: left => `되돌렸습니다. 남은 횟수 ${left}회. `,
+        hintFound: (row, col, left) => `힌트: ${row + 1}행 ${col + 1}열에 놓으면 제거됩니다. 남은 힌트 ${left}회. `,
+        noHint: '지금은 매치되는 칸이 없습니다. ',
+        status: (score, moves, remaining, digit) =>
+            `점수 ${score}, 이동 ${moves}, 남은 타일 ${remaining}개. ${digit}을(를) 놓으세요.`,
+        cellLabel: (row, col, value) =>
+            `${row + 1}행 ${col + 1}열, ${value === null ? '빈 칸' : `숫자 ${value}`}`,
+        loading: '서버 기록을 불러오는 중…',
+        submitting: '기록을 저장하는 중…',
+        offline: '서버에 연결할 수 없어 이 기기의 기록을 표시합니다.',
+        saveFailed: '서버에 저장하지 못해 이 기기에만 기록했습니다.',
+        saved: '기록을 저장했습니다.'
+    }
 };
+const DEFAULT_LANGUAGE = 'en';
+
+let language = DEFAULT_LANGUAGE;
+const t = (key, ...args) => {
+    const value = I18N[language][key];
+    return typeof value === 'function' ? value(...args) : value;
+};
+
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -154,7 +254,9 @@ class SummingGame {
         // Lets a newer server request win over an older one that is still in flight.
         this.remoteToken = 0;
 
+        this.leaderboardStatusKey = '';
         this.initElements();
+        this.initLanguage();
         this.buildBoard();
         this.loadOrStartGame();
     }
@@ -202,6 +304,68 @@ class SummingGame {
             this.submitScore(this.playerNameInput.value);
         });
         this.skipScoreBtn.addEventListener('click', () => this.submitScore(''));
+    }
+
+    initLanguage() {
+        const saved = readStorage('language');
+        language = I18N[saved] ? saved : DEFAULT_LANGUAGE;
+        this.howToPlayDialog = document.getElementById('howToPlayDialog');
+
+        document.addEventListener('click', event => {
+            const langBtn = event.target.closest('.lang-btn');
+            if (langBtn) {
+                this.setLanguage(langBtn.dataset.lang);
+            } else if (event.target.closest('[data-action="howToPlay"]')) {
+                this.howToPlayDialog.showModal();
+            }
+        });
+        document.getElementById('howToPlayClose').addEventListener('click', () => this.howToPlayDialog.close());
+        // A click on the backdrop targets the dialog element itself.
+        this.howToPlayDialog.addEventListener('click', event => {
+            if (event.target === this.howToPlayDialog) {
+                this.howToPlayDialog.close();
+            }
+        });
+        this.applyLanguage();
+    }
+
+    setLanguage(lang) {
+        if (!I18N[lang] || lang === language) {
+            return;
+        }
+        language = lang;
+        writeStorage('language', lang);
+        this.applyLanguage();
+    }
+
+    // Translates the static markup, then everything the game renders itself.
+    applyLanguage() {
+        document.documentElement.lang = language;
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            el.textContent = t(el.dataset.i18n);
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            el.placeholder = t(el.dataset.i18nPlaceholder);
+        });
+        document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+            el.setAttribute('aria-label', t(el.dataset.i18nAria));
+        });
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.setAttribute('aria-pressed', String(btn.dataset.lang === language));
+        });
+
+        if (!this.cells) {
+            return; // first call, before the board exists
+        }
+        this.cells.forEach((cell, index) => {
+            const value = this.shown[index].value;
+            if (value !== undefined) {
+                cell.setAttribute('aria-label', t('cellLabel', Math.floor(index / BOARD_SIZE), index % BOARD_SIZE, value));
+            }
+        });
+        this.renderResultTitle();
+        this.renderLeaderboard();
+        this.setLeaderboardStatus(this.leaderboardStatusKey);
     }
 
     // Build the 81 cells once; render() only updates them. One delegated listener handles input.
@@ -289,7 +453,7 @@ class SummingGame {
 
     confirmNewGame() {
         const inProgress = this.gameStatus === 'playing' && this.moves > 0;
-        if (this.isResolvingMove || (inProgress && !window.confirm(TEXT.confirmNewGame))) {
+        if (this.isResolvingMove || (inProgress && !window.confirm(t('confirmNewGame')))) {
             return;
         }
         this.startNewGame();
@@ -389,7 +553,7 @@ class SummingGame {
         this.undoState = null;
         this.undosLeft -= 1;
         this.hintCell = null;
-        this.statusPrefix = TEXT.undone(this.undosLeft);
+        this.statusPrefix = t('undone', this.undosLeft);
         this.render();
         this.saveGameState();
     }
@@ -407,7 +571,7 @@ class SummingGame {
 
         const found = findHint(this.board, this.stream[0]);
         if (!found) {
-            this.statusPrefix = TEXT.noHint;
+            this.statusPrefix = t('noHint');
             this.statusElement.textContent = '';
             this.render();
             return;
@@ -415,7 +579,7 @@ class SummingGame {
 
         this.hintsLeft -= 1;
         this.hintCell = found;
-        this.statusPrefix = TEXT.hintFound(found[0], found[1], this.hintsLeft);
+        this.statusPrefix = t('hintFound', found[0], found[1], this.hintsLeft);
         this.render();
         this.saveGameState();
     }
@@ -433,8 +597,7 @@ class SummingGame {
     }
 
     showResult() {
-        const titles = { cleared: TEXT.cleared, gameover: TEXT.gameOver, playing: TEXT.inProgress };
-        this.resultTitle.textContent = titles[this.gameStatus];
+        this.renderResultTitle();
         this.finalScore.textContent = this.score;
         this.finalMoves.textContent = this.moves;
         this.finalRemaining.textContent = countFilled(this.board);
@@ -459,7 +622,15 @@ class SummingGame {
         this.refreshRemote();
     }
 
-    setLeaderboardStatus(text) {
+    renderResultTitle() {
+        const keys = { cleared: 'cleared', gameover: 'gameOver', playing: 'inProgress' };
+        this.resultTitle.textContent = t(keys[this.gameStatus]);
+    }
+
+    // Takes a translation key (or '' to clear) so the text can be re-translated when the language changes.
+    setLeaderboardStatus(key) {
+        this.leaderboardStatusKey = key;
+        const text = key ? t(key) : '';
         if (this.leaderboardStatus.textContent !== text) {
             this.leaderboardStatus.textContent = text;
         }
@@ -471,7 +642,7 @@ class SummingGame {
             return;
         }
         const token = ++this.remoteToken;
-        this.setLeaderboardStatus(TEXT.loading);
+        this.setLeaderboardStatus('loading');
         try {
             const entries = await this.remote.list();
             if (token !== this.remoteToken) {
@@ -485,7 +656,7 @@ class SummingGame {
             }
             console.warn('Failed to load the server leaderboard.', error);
             this.leaderboard.remoteEntries = null;
-            this.setLeaderboardStatus(TEXT.offline);
+            this.setLeaderboardStatus('offline');
         }
         this.renderLeaderboard();
         this.renderBest();
@@ -520,18 +691,18 @@ class SummingGame {
             return;
         }
         const token = ++this.remoteToken;
-        this.setLeaderboardStatus(TEXT.submitting);
+        this.setLeaderboardStatus('submitting');
         try {
             const entries = await this.remote.submit(result);
             if (token === this.remoteToken) {
                 this.leaderboard.remoteEntries = entries;
-                this.setLeaderboardStatus(TEXT.saved);
+                this.setLeaderboardStatus('saved');
             }
         } catch (error) {
             if (token === this.remoteToken) {
                 console.warn('Failed to submit to the server leaderboard.', error);
                 this.leaderboard.remoteEntries = null;
-                this.setLeaderboardStatus(TEXT.saveFailed);
+                this.setLeaderboardStatus('saveFailed');
             }
         }
         if (token === this.remoteToken) {
@@ -552,7 +723,7 @@ class SummingGame {
         if (entries.length === 0) {
             const empty = document.createElement('p');
             empty.className = 'entries-empty';
-            empty.textContent = TEXT.noRecords;
+            empty.textContent = t('noRecords');
             this.leaderboardEntries.appendChild(empty);
             return;
         }
@@ -560,7 +731,7 @@ class SummingGame {
         entries.forEach((entry, index) => {
             const date = new Date(entry.date);
             const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
-            const statusLabel = entry.status === 'cleared' ? TEXT.win : TEXT.end;
+            const statusLabel = entry.status === 'cleared' ? t('win') : t('end');
 
             const item = document.createElement('div');
             item.className = `entry rank-${index + 1}`;
@@ -582,7 +753,7 @@ class SummingGame {
 
             const info = document.createElement('div');
             info.className = 'entry-info';
-            info.textContent = `${TEXT.moves} ${entry.moves} | ${dateStr}`;
+            info.textContent = `${t('moves')} ${entry.moves} | ${dateStr}`;
 
             details.append(name, score, info);
             item.append(rank, details);
@@ -619,8 +790,7 @@ class SummingGame {
                 cell.className = `cell ${filled ? 'filled' : 'empty'}`;
                 cell.textContent = filled ? value : '';
                 cell.tabIndex = filled ? -1 : 0;
-                cell.setAttribute('aria-label',
-                    `${row + 1}행 ${col + 1}열, ${filled ? `숫자 ${value}` : '빈 칸'}`);
+                cell.setAttribute('aria-label', t('cellLabel', row, col, value));
             }
             cell.setAttribute('aria-disabled', String(filled || locked));
             shown.value = value;
@@ -641,8 +811,7 @@ class SummingGame {
 
         // Announce once per move: skip the intermediate render that shows the pre-clear board.
         if (displayBoard === this.board) {
-            const status = this.statusPrefix + `점수 ${this.score}, 이동 ${this.moves}, 남은 타일 ${remaining}개. ` +
-                `${this.stream[0]}을(를) 놓으세요.`;
+            const status = this.statusPrefix + t('status', this.score, this.moves, remaining, this.stream[0]);
             this.statusPrefix = '';
             if (this.statusElement.textContent !== status) {
                 this.statusElement.textContent = status;
